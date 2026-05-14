@@ -1,0 +1,8 @@
+fastapi
+uvicorn
+redis
+sqlalchemy
+aiosqlite
+opencv-python
+onnxruntime
+face-alignment
