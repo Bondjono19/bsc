@@ -1,16 +1,14 @@
 from fastapi import FastAPI, Request, Response
 from contextlib import asynccontextmanager
-from authenticationService import authenticationService
-from database.databaseManager import databaseManager
-from eventConnectionService import eventConnectionService
-from routers import identity_router
+from api.authenticationService import authenticationService
+from shared.database.databaseManager import databaseManager
+from api.routers import identity_router
 # Setup
 
 @asynccontextmanager
 async def run(app: FastAPI):
-   async with databaseManager as db, eventConnectionService as ecs:
+   async with databaseManager as db:
       app.state.db = db
-      app.state.ecs = ecs
       print("app started")
       yield
       print("app cloased")
@@ -32,6 +30,3 @@ async def middleware(request: Request, call_next):
    res = await call_next(request)
 
    return res
-
-
-

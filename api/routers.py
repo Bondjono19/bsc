@@ -1,26 +1,41 @@
 from fastapi import APIRouter,Request,Response
-from identityService import identityService
-from utils.embeddingVectorParser import parseEmbedding
-from eventConnectionService import eventConnectionService
+from api.identityService import identityService
+from api.utils.embeddingVectorParser import parseEmbedding
+from recognition.eventConnectionService import eventConnectionService
 import json
-from database.models import Event
-from database.databaseManager import databaseManager
+from shared.database.models import Event
+from shared.database.databaseManager import databaseManager
 identity_router = APIRouter(prefix="/identities")
 
 @identity_router.post("/create")
 async def addIdentity(request: Request):
+    '''
+        JSON struct:
+            {
+                "name": "John Doe"
+                "globalid": "00001234"
+                "embeddings": [
+                    [v1_1,v1_2,...v1_512],
+                    [vi_1,vi_2,...vi_512],
+                    ...
+                ]
+            }
+    '''
     data = json.loads(await request.body())
     if not data:
         return Response("Empty request body", status_code=400)
-    embedding = data.get("embedding")
-    if not embedding:
+    embeddings = data.get("embeddings")
+    if not embeddings:
         return Response("Missing embedding", status_code=400)
     name = data.get("name")
     if not name:
         return Response("Missing name", status_code=400)
-    if not parseEmbedding(embedding=embedding):
-        return Response("Invalid vector", status_code=400)
-    res = await identityService.addIdentity(data["embedding"], data["name"])
+    if not parseEmbedding(embeddings=embeddings):
+        return Response("Invalid vector(s)", status_code=400)
+    global_id = data.get("globalid")
+    if not global_id:
+        return Response("Missing globalid", status_code=400)
+    res = await identityService.addIdentity(data["globalid"], data["name"],data["embeddings"])
     if(res):
         return {"message":"Successfully added embedding", "id":res.id}
     else:

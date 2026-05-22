@@ -2,7 +2,7 @@ fastapi
 uvicorn
 redis
 sqlalchemy
-aiosqlite
-opencv-python
+opencv-python-headless
 onnxruntime
-face-alignment
+psycopg
+pgvector

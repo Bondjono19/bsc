@@ -1,7 +1,7 @@
-from database.databaseManager import databaseManager
-from database.models import AuthToken
+from shared.database.databaseManager import databaseManager
+from shared.database.models import AuthToken
 from sqlalchemy import select
-from database.databaseManager import databaseManager
+from shared.database.databaseManager import databaseManager
 
 class AuthenticationService:
     async def verifyToken(self, token: str) -> bool:

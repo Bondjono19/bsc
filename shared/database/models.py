@@ -1,6 +1,8 @@
 from sqlalchemy.orm import DeclarativeBase
-from sqlalchemy.orm import Mapped,mapped_column
+from sqlalchemy.orm import Mapped,mapped_column,relationship
+from sqlalchemy import ForeignKey
 from sqlalchemy import String, Text, JSON
+from pgvector.sqlalchemy import Vector
 import uuid
 
 class BaseModel(DeclarativeBase):
@@ -23,5 +25,13 @@ class Event(BaseModel):
 class Identity(BaseModel):
     __tablename__ = "identities"
     id: Mapped[int] = mapped_column(primary_key=True)
+    global_id: Mapped[int] = mapped_column(unique=True)
     name: Mapped[str] = mapped_column(String,unique=True)
-    embedding: Mapped[list[float]] = mapped_column(JSON)
+    embeddings: Mapped[list["Embedding"]] = relationship(back_populates="identity", cascade="all, delete-orphan")
+
+class Embedding(BaseModel):
+    __tablename__ = "embeddings"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    identity_id: Mapped[int] = mapped_column(ForeignKey("identities.id",ondelete="CASCADE"))
+    vector: Mapped[list[float]] = mapped_column(Vector(512), unique=True)
+    identity: Mapped["Identity"] = relationship(back_populates="embeddings")

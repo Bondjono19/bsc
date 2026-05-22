@@ -1,17 +1,24 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
 from sqlalchemy.orm import DeclarativeBase, sessionmaker
 from typing import Type,AsyncGenerator
-from sqlalchemy import select
+from sqlalchemy import select, text
 from sqlalchemy.engine import CursorResult
-from database.models import BaseModel,Identity,AuthToken,Event
+from shared.database.models import BaseModel,Identity,AuthToken,Event
+import os
 
 class DatabaseManager:
     def __init__(self):
-        self.engine = create_async_engine("sqlite+aiosqlite:///database/data/app.db")
+        self.DB_USER = os.getenv("POSTGRES_USER")
+        self.DB_HOST = os.getenv("POSTGRES_HOST")
+        self.DB_PASSWORD = os.getenv("POSTGRES_PASSWORD")
+        self.DB_PORT = os.getenv("POSTGRES_PORT")
+        self.DB = os.getenv("POSTGRES_DB")
+        self.engine = create_async_engine(f"postgresql+psycopg://{self.DB_USER}:{self.DB_PASSWORD}@{self.DB_HOST}:{self.DB_PORT}/{self.DB}")
         self.AsyncSessionLocal = sessionmaker(self.engine,class_=AsyncSession, expire_on_commit=False)
 
     async def __aenter__(self) -> "DatabaseManager":
         async with self.engine.begin() as conn:
+            await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
             await conn.run_sync(BaseModel.metadata.create_all)
             #await self.insertBasic()
             return self
@@ -50,10 +57,14 @@ class DatabaseManager:
             await db.merge(object)
             await db.commit()
     
+    async def fetchAll(self, model: BaseModel) -> None:
+        async with self.AsyncSessionLocal() as db:
+            res = await db.execute(select(model))
+            return res.scalars().all()
+
     async def insertBasic(self):
         tkn = AuthToken(token="token",description="test")
         await self.add(tkn)
         print("added idenntity")
 
 databaseManager = DatabaseManager()
-    

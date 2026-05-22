@@ -18,6 +18,10 @@ while True:
                         w = int(face[2])
                         h = int(face[3])
                         cv2.rectangle(frame,(x,y),(x+w,y+h),(0,255,0),2)
+                
+                        bounding_box = face[0:4]
+                        landmarks = face[4:14]
+                        transformation_matrix = cv2.estimateAffinePartial2D(landmarks)
         
         cv2.imshow("stream",frame)
 

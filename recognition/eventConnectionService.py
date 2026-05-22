@@ -3,8 +3,8 @@ import os
 import asyncio
 import logging
 import json
-from database.databaseManager import databaseManager
-from database.models import Event
+from shared.database.databaseManager import databaseManager
+from shared.database.models import Event
 from sqlalchemy import select
 
 class EventConnectionService:
