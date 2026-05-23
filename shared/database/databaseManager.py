@@ -20,7 +20,7 @@ class DatabaseManager:
         async with self.engine.begin() as conn:
             await conn.execute(text("CREATE EXTENSION IF NOT EXISTS vector"))
             await conn.run_sync(BaseModel.metadata.create_all)
-            #await self.insertBasic()
+            await self.insertBasic()
             return self
 
     async def __aexit__(self, exc_type, exc, tb):
@@ -63,6 +63,10 @@ class DatabaseManager:
             return res.scalars().all()
 
     async def insertBasic(self):
+        async with self.AsyncSessionLocal() as db:
+            res = await db.execute(select(AuthToken).where(AuthToken.description == "test"))
+            if not res.scalar_one_or_none() == None:
+                return
         tkn = AuthToken(token="token",description="test")
         await self.add(tkn)
         print("added idenntity")
