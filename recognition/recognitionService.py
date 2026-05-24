@@ -120,12 +120,12 @@ class RecognitionService:
                 except Exception as e:
                     print(e)
     def insert_face(self):
+        self.cap = cv2.VideoCapture(0,cv2.CAP_V4L2)
+        if not self.cap.isOpened():
+            print("No cam found")
+            return
         while True:
             try:
-                self.cap = cv2.VideoCapture(0,cv2.CAP_V4L2)
-                if not self.cap.isOpened():
-                    print("No cam found")
-                    return
                 print("watching")
                 input("Type anything to capture")
                 ret, frame = recognitionService.cap.read()
