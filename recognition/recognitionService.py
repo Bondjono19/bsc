@@ -140,4 +140,4 @@ class RecognitionService:
                     print(f"added: {embedding_obj}")
                     input("type to continue")
 
-recognitionService = RecognitionService(True)
+recognitionService = RecognitionService(False)
