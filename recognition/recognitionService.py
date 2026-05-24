@@ -35,7 +35,8 @@ class RecognitionService:
             self.thread = asyncio.create_task(asyncio.to_thread(self.detect_face))
             self.thread_running = True
         else:
-            self.detect_face()
+            self.thread = asyncio.create_task(asyncio.to_thread(self.insert_face))
+            self.thread_running = True
         return self
     
     async def load_identites(self):
@@ -56,10 +57,10 @@ class RecognitionService:
         return (np.dot(v1,v2)) / (np.linalg.norm(v1)*np.linalg.norm(v2))
 
     def compare_faces(self, embedding: np.ndarray):
-        best_similarity = (0,None)
+        best_similarity = [0,None]
         for identity in self.identities:
             sim = self.compare(embedding,identity[3])
-            if (sim > best_similarity):
+            if (sim > best_similarity[0]):
                 best_similarity[0] = sim
                 best_similarity[1] = identity
 
@@ -88,24 +89,35 @@ class RecognitionService:
     def detect_face(self):
         self.cap = cv2.VideoCapture(0,cv2.CAP_V4L2)
         if not self.cap.isOpened():
+            print("No cam found")
             return
+        print("watching")
         while True:
             ret, frame = self.cap.read()
+            h,w, _ = frame.shape
             if not (self.cap.isOpened()):
+                print("broke loop, cap not open")
                 break
             if not ret:
+                print("no ret")
                 break
+            self.detector.setInputSize((w,h))
             _, faces = self.detector.detect(frame)
+            print(faces)
             if faces is not None:
-                for face in faces:
-                    landmarks = face[4:14].reshape(5,2).astype(np.float32)
-                    transformation_matrix = cv2.estimateAffinePartial2D(landmarks,self.reference_points)
-                    aligned_image = cv2.warpAffine(frame,transformation_matrix[0],(112,112))
-                    embedding = self.recognize_face(aligned_image)
-                    result = self.compare_faces(np.asarray(embedding,dtype=np.float32).flatten())
-                    if(result[0]>self.threshold):
-                        print(f"Detected: {result[1][2]} with local id {result[1][0]} at {result[0]} similarity score")
-
+                try:
+                    for face in faces:
+                        landmarks = face[4:14].reshape(5,2).astype(np.float32)
+                        transformation_matrix = cv2.estimateAffinePartial2D(landmarks,self.reference_points)
+                        aligned_image = cv2.warpAffine(frame,transformation_matrix[0],(112,112))
+                        embedding = self.recognize_face(aligned_image)
+                        result = self.compare_faces(np.asarray(embedding,dtype=np.float32).flatten())
+                        if(result[0]>self.threshold):
+                            print(f"Detected: {result[1][2]} with local id {result[1][0]} at {result[0]} similarity score")
+                        else:
+                            print(f"Face detected, no match in DB, max sim score: {result[0]}")
+                except Exception as e:
+                    print(e)
     def insert_face(self):
         while True:
             self.cap = cv2.VideoCapture(0)
@@ -128,4 +140,4 @@ class RecognitionService:
                     print(f"added: {embedding_obj}")
                     input("type to continue")
 
-recognitionService = RecognitionService(False)
+recognitionService = RecognitionService(True)
