@@ -25,12 +25,14 @@ class RecognitionService:
         self.cap = None
         self.all_identities = None
         self.threshold = 0.5
+        self.loop = None
 
     async def __aenter__(self):
         self.detector = cv2.FaceDetectorYN.create(os.path.join(MODELS_DIR, "face_detection_yunet_2023mar.onnx"),"",self.camera_dimensions)
         self.recognizer = oxrt.InferenceSession(os.path.join(MODELS_DIR, "edgeface_xs_gamme_06.onnx"),providers=["CPUExecutionProvider"])
         self.reference_points = np.asarray(get_reference_points(),dtype=np.float32).reshape(5,2)
         self.identities = []
+        self.loop = asyncio.get_running_loop()
         await self.load_identites()
         if(self.detection_mode):
             self.thread = asyncio.create_task(asyncio.to_thread(self.detect_face))
@@ -145,7 +147,9 @@ class RecognitionService:
                         embedding = recognitionService.recognize_face(aligned_image)[0]
                         p_list = embedding.tolist()
                         identity_id = input("identity_id: ")
-                        embedding_obj = databaseManager.add(Embedding(identity_id=identity_id,vector=p_list))
+                        #wait for async function on event loop
+                        future = asyncio.run_coroutine_threadsafe(databaseManager.add(Embedding(identity_id=identity_id,vector=p_list)),self.loop)
+                        embedding_obj = future.result()
                         print(f"added: {embedding_obj}")
                         input("type to continue")
             except Exception as e:
