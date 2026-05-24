@@ -14,7 +14,7 @@ from shared.database.models import Identity,Embedding
 class RecognitionService:
     def __init__(self, detection_mode: bool):
         self.detection_mode = detection_mode
-        self.camera_dimensions = (800,448)
+        self.camera_dimensions = (640,480)
         self.model_path = os.path.join(MODELS_DIR, "edgeface_xs_gamme_06.onnx")
         self.detector = None
         self.recognizer = None
@@ -49,7 +49,7 @@ class RecognitionService:
 
     async def __aexit__(self, exc_type, exc, tb):
         self.thread_running = False
-        await self.thread
+        self.thread
         self.cap.release()
     
     def compare(self,v1,v2):
@@ -86,8 +86,10 @@ class RecognitionService:
         return embedding
 
     def detect_face(self):
+        self.cap = cv2.VideoCapture(0,cv2.CAP_V4L2)
+        if not self.cap.isOpened():
+            return
         while True:
-            self.cap = cv2.VideoCapture(0)
             ret, frame = self.cap.read()
             if not (self.cap.isOpened()):
                 break
@@ -101,7 +103,7 @@ class RecognitionService:
                     aligned_image = cv2.warpAffine(frame,transformation_matrix[0],(112,112))
                     embedding = self.recognize_face(aligned_image)
                     result = self.compare_faces(np.asarray(embedding,dtype=np.float32).flatten())
-                    if(result>self.threshold):
+                    if(result[0]>self.threshold):
                         print(f"Detected: {result[1][2]} with local id {result[1][0]} at {result[0]} similarity score")
 
     def insert_face(self):
