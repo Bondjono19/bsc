@@ -5,6 +5,7 @@ import os
 from cv2.typing import MatLike
 import onnxruntime as oxrt
 import asyncio
+import traceback
 
 MODELS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
 from recognition.utils.get_points import get_reference_points
@@ -120,31 +121,34 @@ class RecognitionService:
                     print(e)
     def insert_face(self):
         while True:
-            self.cap = cv2.VideoCapture(0,cv2.CAP_V4L2)
-            if not self.cap.isOpened():
-                print("No cam found")
-                return
-            print("watching")
-            input("Type anything to capture")
-            ret, frame = recognitionService.cap.read()
-            h,w, _ = frame.shape
-            if not (self.cap.isOpened()): 
-                break
-            if not ret:
-                break
-            self.detector.setInputSize((w,h))
-            _, faces = recognitionService.detector.detect(frame)
-            print(faces)
-            if faces is not None:
-                for face in faces:
-                    landmarks = face[4:14].reshape(5,2).astype(np.float32)
-                    transformation_matrix = cv2.estimateAffinePartial2D(landmarks,recognitionService.reference_points)
-                    aligned_image = cv2.warpAffine(frame,transformation_matrix[0],(112,112))
-                    embedding = recognitionService.recognize_face(aligned_image)
-                    p_list = embedding.tolist()
-                    identity_id = input("identity_id: ")
-                    embedding_obj = databaseManager.add(Embedding(identity_id=identity_id,vector=p_list))
-                    print(f"added: {embedding_obj}")
-                    input("type to continue")
+            try:
+                self.cap = cv2.VideoCapture(0,cv2.CAP_V4L2)
+                if not self.cap.isOpened():
+                    print("No cam found")
+                    return
+                print("watching")
+                input("Type anything to capture")
+                ret, frame = recognitionService.cap.read()
+                h,w, _ = frame.shape
+                if not (self.cap.isOpened()): 
+                    break
+                if not ret:
+                    break
+                self.detector.setInputSize((w,h))
+                _, faces = recognitionService.detector.detect(frame)
+                print(faces)
+                if faces is not None:
+                    for face in faces:
+                        landmarks = face[4:14].reshape(5,2).astype(np.float32)
+                        transformation_matrix = cv2.estimateAffinePartial2D(landmarks,recognitionService.reference_points)
+                        aligned_image = cv2.warpAffine(frame,transformation_matrix[0],(112,112))
+                        embedding = recognitionService.recognize_face(aligned_image)
+                        p_list = embedding.tolist()
+                        identity_id = input("identity_id: ")
+                        embedding_obj = databaseManager.add(Embedding(identity_id=identity_id,vector=p_list))
+                        print(f"added: {embedding_obj}")
+                        input("type to continue")
+            except Exception as e:
+                traceback.print_exc()
 
 recognitionService = RecognitionService(False)
