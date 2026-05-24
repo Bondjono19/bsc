@@ -120,14 +120,21 @@ class RecognitionService:
                     print(e)
     def insert_face(self):
         while True:
-            self.cap = cv2.VideoCapture(0)
+            self.cap = cv2.VideoCapture(0,cv2.CAP_V4L2)
+            if not self.cap.isOpened():
+                print("No cam found")
+                return
+            print("watching")
             input("Type anything to capture")
             ret, frame = recognitionService.cap.read()
+            h,w, _ = frame.shape
             if not (self.cap.isOpened()): 
                 break
             if not ret:
                 break
+            self.detector.setInputSize((w,h))
             _, faces = recognitionService.detector.detect(frame)
+            print(faces)
             if faces is not None:
                 for face in faces:
                     landmarks = face[4:14].reshape(5,2).astype(np.float32)
