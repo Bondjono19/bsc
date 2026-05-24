@@ -1,5 +1,5 @@
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession
-from sqlalchemy.orm import DeclarativeBase, sessionmaker
+from sqlalchemy.orm import DeclarativeBase, sessionmaker, selectinload
 from typing import Type,AsyncGenerator
 from sqlalchemy import select, text
 from sqlalchemy.engine import CursorResult
@@ -57,9 +57,12 @@ class DatabaseManager:
             await db.merge(object)
             await db.commit()
     
-    async def fetchAll(self, model: BaseModel) -> None:
+    async def fetchAll(self, model: BaseModel, *eager_load) -> None:
         async with self.AsyncSessionLocal() as db:
-            res = await db.execute(select(model))
+            query = select(model)
+            for relationship in eager_load:
+                query = query.options(selectinload(relationship))
+            res = await db.execute(query)
             return res.scalars().all()
 
     async def insertBasic(self):

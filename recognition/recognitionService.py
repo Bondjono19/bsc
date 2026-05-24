@@ -12,7 +12,8 @@ from shared.database.databaseManager import databaseManager
 from shared.database.models import Identity,Embedding
 
 class RecognitionService:
-    def __init__(self):
+    def __init__(self, detection_mode: bool):
+        self.detection_mode = detection_mode
         self.camera_dimensions = (800,448)
         self.model_path = os.path.join(MODELS_DIR, "edgeface_xs_gamme_06.onnx")
         self.detector = None
@@ -30,17 +31,21 @@ class RecognitionService:
         self.reference_points = np.asarray(get_reference_points(),dtype=np.float32).reshape(5,2)
         self.identities = []
         await self.load_identites()
-        self.thread = asyncio.create_task(asyncio.to_thread(self.detect_face))
-        self.thread_running = True
+        if(self.detection_mode):
+            self.thread = asyncio.create_task(asyncio.to_thread(self.detect_face))
+            self.thread_running = True
+        else:
+            self.detect_face()
         return self
     
     async def load_identites(self):
-        identities = await databaseManager.fetchAll(Identity)
-        for identity in identities:
-            embeddings = identity.embeddings
-            for embedding in embeddings:
-                vector = np.asarray(embedding.vector,dtype=np.float32)
-                self.identities.append((identity.id,identity.global_id,identity.name,vector))
+        identities = await databaseManager.fetchAll(Identity, Identity.embeddings)
+        if identities is not None:
+            for identity in identities:
+                embeddings = identity.embeddings
+                for embedding in embeddings:
+                    vector = np.asarray(embedding.vector,dtype=np.float32)
+                    self.identities.append((identity.id,identity.global_id,identity.name,vector))
 
     async def __aexit__(self, exc_type, exc, tb):
         self.thread_running = False
@@ -99,36 +104,26 @@ class RecognitionService:
                     if(result>self.threshold):
                         print(f"Detected: {result[1][2]} with local id {result[1][0]} at {result[0]} similarity score")
 
+    def insert_face(self):
+        while True:
+            self.cap = cv2.VideoCapture(0)
+            input("Type anything to capture")
+            ret, frame = recognitionService.cap.read()
+            if not (self.cap.isOpened()): 
+                break
+            if not ret:
+                break
+            _, faces = recognitionService.detector.detect(frame)
+            if faces is not None:
+                for face in faces:
+                    landmarks = face[4:14].reshape(5,2).astype(np.float32)
+                    transformation_matrix = cv2.estimateAffinePartial2D(landmarks,recognitionService.reference_points)
+                    aligned_image = cv2.warpAffine(frame,transformation_matrix[0],(112,112))
+                    embedding = recognitionService.recognize_face(aligned_image)
+                    p_list = embedding.tolist()
+                    identity_id = input("identity_id: ")
+                    embedding_obj = databaseManager.add(Embedding(identity_id=identity_id,vector=p_list))
+                    print(f"added: {embedding_obj}")
+                    input("type to continue")
 
-    def watch_detect():
-        pass
-
-recognitionService = RecognitionService()
-
-#--- INSERT NEW IDENTITES
-def insert_face(recognitionService: RecognitionService):
-    while True:
-        recognitionService.cap = cv2.VideoCapture(0)
-        input("Type anything to capture")
-        ret, frame = recognitionService.cap.read()
-        if not (recognitionService.cap.isOpened()): 
-            break
-        if not ret:
-            break
-        _, faces = recognitionService.detector.detect(frame)
-        if faces is not None:
-            for face in faces:
-                landmarks = face[4:14].reshape(5,2).astype(np.float32)
-                transformation_matrix = cv2.estimateAffinePartial2D(landmarks,recognitionService.reference_points)
-                aligned_image = cv2.warpAffine(frame,transformation_matrix[0],(112,112))
-                embedding = recognitionService.recognize_face(aligned_image)
-                p_list = embedding.tolist()
-                identity_id = input("identity_id: ")
-                embedding_obj = databaseManager.add(Embedding(identity_id=identity_id,vector=p_list))
-                print(f"added: {embedding_obj}")
-                input("type to continue")
-
-
-
-if __name__ == "__main__":
-    recognitionService.detect_face()
+recognitionService = RecognitionService(False)
