@@ -85,7 +85,7 @@ class RecognitionService:
     def recognize_face(self,frame: MatLike):
         tensor = self.preprocess_tensor(frame)
         embedding = self.recognizer.run(None, {"input.1": tensor})
-        return embedding
+        return np.asarray(embedding[0],dtype=np.float32).flatten()
 
     def detect_face(self):
         while self.thread_running:
@@ -144,7 +144,7 @@ class RecognitionService:
                         landmarks = face[4:14].reshape(5,2).astype(np.float32)
                         transformation_matrix = cv2.estimateAffinePartial2D(landmarks,recognitionService.reference_points)
                         aligned_image = cv2.warpAffine(frame,transformation_matrix[0],(112,112))
-                        embedding = recognitionService.recognize_face(aligned_image)[0]
+                        embedding = recognitionService.recognize_face(aligned_image)
                         p_list = embedding.tolist()
                         identity_id = input("identity_id: ")
                         #wait for async function on event loop
