@@ -35,6 +35,8 @@ services:
       - "/dev/video0:/dev/video0"
     group_add:
       - video
+    stdin_open: true
+    tty: true
   db:
     image: pgvector/pgvector:pg17
     restart: always
