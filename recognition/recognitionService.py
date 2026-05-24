@@ -142,7 +142,7 @@ class RecognitionService:
                         landmarks = face[4:14].reshape(5,2).astype(np.float32)
                         transformation_matrix = cv2.estimateAffinePartial2D(landmarks,recognitionService.reference_points)
                         aligned_image = cv2.warpAffine(frame,transformation_matrix[0],(112,112))
-                        embedding = recognitionService.recognize_face(aligned_image)
+                        embedding = recognitionService.recognize_face(aligned_image)[0]
                         p_list = embedding.tolist()
                         identity_id = input("identity_id: ")
                         embedding_obj = databaseManager.add(Embedding(identity_id=identity_id,vector=p_list))
