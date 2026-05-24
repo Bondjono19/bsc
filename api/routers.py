@@ -24,18 +24,20 @@ async def addIdentity(request: Request):
     data = json.loads(await request.body())
     if not data:
         return Response("Empty request body", status_code=400)
-    embeddings = data.get("embeddings")
-    if not embeddings:
-        return Response("Missing embedding", status_code=400)
+    
     name = data.get("name")
     if not name:
         return Response("Missing name", status_code=400)
-    if not parseEmbedding(embeddings=embeddings):
-        return Response("Invalid vector(s)", status_code=400)
+    
     global_id = data.get("globalid")
     if not global_id:
         return Response("Missing globalid", status_code=400)
-    res = await identityService.addIdentity(data["globalid"], data["name"],data["embeddings"])
+    
+    embeddings = data.get("embeddings")
+
+    if not parseEmbedding(embeddings=embeddings):
+        return Response("Invalid vector(s)", status_code=400)
+    res = await identityService.addIdentity(data["globalid"], data["name"],embeddings)
     if(res):
         return {"message":"Successfully added embedding", "id":res.id}
     else:

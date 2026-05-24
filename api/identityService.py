@@ -8,12 +8,14 @@ import json
 class IdentityService:
     async def addIdentity(self, global_id: str, name: str, embeddings: list[list[float]]) -> Identity:
         try:
-            embedding_objs = []
-            for embedding in embeddings:
-                embedding_objs.append(Embedding(vector=embedding))
-            identity = Identity(global_id=global_id,name=name,embeddings=embedding_objs)
+            if not embeddings == None:
+                embedding_objs = []
+                for embedding in embeddings:
+                    embedding_objs.append(Embedding(vector=embedding))
+                identity = Identity(global_id=global_id,name=name,embeddings=embedding_objs)
+            else:
+                identity = Identity(global_id=global_id,name=name)
             identity = await databaseManager.add(identity)
-            print(identity)
             return identity
         except Exception as e:
             logging.error(e)
