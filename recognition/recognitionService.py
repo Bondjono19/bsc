@@ -53,8 +53,6 @@ class RecognitionService:
 
     async def __aexit__(self, exc_type, exc, tb):
         self.thread_running = False
-        self.thread
-        self.cap.release()
     
     def compare(self,v1,v2):
         return (np.dot(v1,v2)) / (np.linalg.norm(v1)*np.linalg.norm(v2))
@@ -90,25 +88,25 @@ class RecognitionService:
         return embedding
 
     def detect_face(self):
-        self.cap = cv2.VideoCapture(0,cv2.CAP_V4L2)
-        if not self.cap.isOpened():
-            print("No cam found")
-            return
-        print("watching")
-        while True:
-            ret, frame = self.cap.read()
-            h,w, _ = frame.shape
-            if not (self.cap.isOpened()):
-                print("broke loop, cap not open")
-                break
-            if not ret:
-                print("no ret")
-                break
-            self.detector.setInputSize((w,h))
-            _, faces = self.detector.detect(frame)
-            print(faces)
-            if faces is not None:
-                try:
+        while self.thread_running:
+            try:
+                self.cap = cv2.VideoCapture(0,cv2.CAP_V4L2)
+                if not self.cap.isOpened():
+                    print("No cam found")
+                    return
+                print("watching")
+                ret, frame = self.cap.read()
+                h,w, _ = frame.shape
+                if not (self.cap.isOpened()):
+                    print("broke loop, cap not open")
+                    break
+                if not ret:
+                    print("no ret")
+                    break
+                self.detector.setInputSize((w,h))
+                _, faces = self.detector.detect(frame)
+                print(faces)
+                if faces is not None:
                     for face in faces:
                         landmarks = face[4:14].reshape(5,2).astype(np.float32)
                         transformation_matrix = cv2.estimateAffinePartial2D(landmarks,self.reference_points)
@@ -119,15 +117,17 @@ class RecognitionService:
                             print(f"Detected: {result[1][2]} with local id {result[1][0]} at {result[0]} similarity score")
                         else:
                             print(f"Face detected, no match in DB, max sim score: {result[0]}")
-                except Exception as e:
-                    print(e)
+            except Exception as e:
+                print(e)
+            finally:
+                self.cap.release()
     def insert_face(self):
-        self.cap = cv2.VideoCapture(0,cv2.CAP_V4L2)
-        if not self.cap.isOpened():
-            print("No cam found!")
-            return
-        while True:
+        while self.thread_running:
             try:
+                self.cap = cv2.VideoCapture(0,cv2.CAP_V4L2)
+                if not self.cap.isOpened():
+                    print("No cam found!")
+                    return
                 print("watching")
                 input("Type anything to capture")
                 if not (self.cap.isOpened()): 
@@ -155,5 +155,7 @@ class RecognitionService:
             except Exception as e:
                 traceback.print_exc()
                 print(e)
+            finally:
+                self.cap.release()
 
 recognitionService = RecognitionService(False)
