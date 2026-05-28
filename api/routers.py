@@ -47,6 +47,12 @@ async def addIdentity(request: Request):
 
 @identity_router.delete("/remove")
 async def removeIdentity(request: Request):
+    '''
+        JSON struct:
+            {
+                "id" : 123
+            }
+    '''
     data = json.loads(await request.body())
     if not data:
         return Response("Empty request body", status_code=400)
@@ -58,7 +64,3 @@ async def removeIdentity(request: Request):
         return Response("No such identity", status_code=400)
     return Response("Removed identity succesfully", status_code=200)
 
-@identity_router.get("/test")
-async def test(req: Request):
-    await databaseManager.add(Event(direction="outbound",content="lol",channel="c"))
-    return {"success"}

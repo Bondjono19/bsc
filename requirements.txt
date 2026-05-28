@@ -6,3 +6,7 @@ opencv-python-headless
 onnxruntime
 psycopg
 pgvector
+pytest
+pytest-asyncio
+pytest-cov
+httpx

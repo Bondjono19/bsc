@@ -68,7 +68,6 @@ class RecognitionService:
         return best_similarity
         #DB face iterations
         
-
     def preprocess_tensor(self,frame):
         tensor = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
         #Convnert datatype
@@ -121,6 +120,10 @@ class RecognitionService:
                 print(e)
             finally:
                 self.cap.release()
+    '''
+        Comments on insert_face()
+        Used during dev to insert faces into the system, not part of original architecture
+    '''
     def insert_face(self):
         while self.thread_running:
             try:
@@ -158,4 +161,4 @@ class RecognitionService:
             finally:
                 self.cap.release()
 
-recognitionService = RecognitionService(False)
+recognitionService = RecognitionService(True)

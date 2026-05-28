@@ -1,5 +1,3 @@
-#from mtcnn_pytorch.src.align_trans import get_reference_facial_points, warp_and_crop_face
-#print(get_reference_facial_points(default_square=True))
 import numpy as np
 def get_reference_points():
     return np.array(

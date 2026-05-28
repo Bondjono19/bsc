@@ -101,6 +101,8 @@ class EventConnectionService:
 
     async def handleMessage(self,message: str) -> None:
         data = json.loads(message)
-        #create some new event object
+        #Handle message appropriately
+        #Store event in DB
+        return
         
 eventConnectionService = EventConnectionService("someChannel")
