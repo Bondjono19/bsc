@@ -112,7 +112,7 @@ class RecognitionService:
                     for face in faces:
                         landmarks = face[4:14].reshape(5,2).astype(np.float32)
                         transformation_matrix = SimilarityTransform.from_estimate(landmarks,self.reference_points)#cv2.estimateAffinePartial2D(landmarks,self.reference_points)
-                        aligned_image = cv2.warpAffine(frame,transformation_matrix,(112,112))
+                        aligned_image = cv2.warpAffine(frame,transformation_matrix[0:2, :],(112,112))
                         embedding = self.recognize_face(aligned_image)
                         result = self.compare_faces(np.asarray(embedding,dtype=np.float32).flatten())
                         response: str
