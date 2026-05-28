@@ -6,11 +6,10 @@ Abastract class that system integrations can use to pass on access decision.
 '''
 
 from abc import ABC, abstractmethod
-from typing import JSON
 class AccessGrantor(ABC):
 
     @abstractmethod
-    def grantAccess(self,data: JSON):
+    def grantAccess(self,data: str):
         pass
 
 class AccessGrantorExample(AccessGrantor):
