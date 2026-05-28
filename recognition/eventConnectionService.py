@@ -12,20 +12,20 @@ class EventConnectionService:
         self.channel = channel
         self.redis_instance = None
         self.pubsub = None
-        self.lisen_task = None
+        self.listen_task = None
         self.REDIS_HOST = os.getenv("REDIS_HOST")
         self.REDIS_PORT = os.getenv("REDIS_PORT")
         self.REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
         self.connectedOnPublish = None
         #self.REDIS_CERT_REQUIRED = os.getenv("REDIS_CERT_REQUIRED")
     
-    async def __aenter__(self):
-        print("hello")
+    async def __aenter__(self) -> "EventConnectionService":
         await self.initialize()
         self.listen_task = asyncio.create_task(self.listen(self.channel))
         self.publish_task = asyncio.create_task(self.try_flush())
+        return self
 
-    async def __aexit__(self, exc_type, exc, tb):
+    async def __aexit__(self, exc_type, exc, tb) -> None:
         await self.close()
 
     async def initialize(self) -> None:
@@ -39,13 +39,17 @@ class EventConnectionService:
             pass
             #log
     
-    async def close(self):
-        self.listen_task.cancel()
-        self.publish_task
-        await self.pubsub.close()
-        await self.redis_instance.aclose()
+    async def close(self) -> None:
+        if self.listen_task:
+            self.listen_task.cancel()
+        if self.publish_task:
+            self.publish_task.cancel()
+        if self.pubsub:
+            await self.pubsub.close()
+        if self.redis_instance:
+            await self.redis_instance.aclose()
 
-    async def reconnect(self):
+    async def reconnect(self) -> None:
         try:
             await self.pubsub.aclose()
         except:
@@ -65,19 +69,18 @@ class EventConnectionService:
                         await self.handleMessage(message["data"])
             except Exception as e:
                 logging.error(e)
-                print("Error on connection to event broker, sleeping 5 and reconneting")
-                await asyncio.sleep(5)
+                print("Error on connection to event broker, sleeping 10 and reconneting")
+                await asyncio.sleep(10)
                 await self.reconnect()
 
-    async def try_flush(self):
+    async def try_flush(self) -> None:
         while True:
-            if(await self.redis_instance.ping()):
+            eventSum = 0
+            if(self.redis_instance and await self.redis_instance.ping()):
                 events = await databaseManager.execute(select(Event).where(Event.status == "pending").where(Event.direction == "outbound"))
-                eventSum = 0
                 for event in events:
                     try:
                         event = await self.publish(event)
-                        await databaseManager.update(event)
                         eventSum+=1
                     except:
                         #log
@@ -86,16 +89,17 @@ class EventConnectionService:
                 print(f"Flushed {eventSum} events")
             await asyncio.sleep(30)
 
-    async def publish(self, event: Event) -> None:
+    async def publish(self, event: Event) -> Event:
         try:
             channel = event.channel
             message = event.content
             await self.redis_instance.publish(channel,message)
             event.status = "published"
-        except:
+        except Exception:
             event.status = "pending"
-        
-        await databaseManager.update(event)
+            raise
+        finally:
+            await databaseManager.update(event)
         return event
 
 
@@ -105,4 +109,4 @@ class EventConnectionService:
         #Store event in DB
         return
         
-eventConnectionService = EventConnectionService("someChannel")
+eventConnectionService = EventConnectionService("recognitionChannel")

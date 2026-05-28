@@ -6,11 +6,14 @@ from cv2.typing import MatLike
 import onnxruntime as oxrt
 import asyncio
 import traceback
-
-MODELS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
 from recognition.utils.get_points import get_reference_points
 from shared.database.databaseManager import databaseManager
-from shared.database.models import Identity,Embedding
+from shared.database.models import Identity,Embedding, Event
+from recognition.eventConnectionService import eventConnectionService
+from recognition.accessGrantor import accessGrantorExample
+from skimage.transform import SimilarityTransform
+MODELS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
+
 
 class RecognitionService:
     def __init__(self, detection_mode: bool):
@@ -108,14 +111,25 @@ class RecognitionService:
                 if faces is not None:
                     for face in faces:
                         landmarks = face[4:14].reshape(5,2).astype(np.float32)
-                        transformation_matrix = cv2.estimateAffinePartial2D(landmarks,self.reference_points)
+                        transformation_matrix = SimilarityTransform.estimate_from(landmarks,self.reference_points)#cv2.estimateAffinePartial2D(landmarks,self.reference_points)
                         aligned_image = cv2.warpAffine(frame,transformation_matrix[0],(112,112))
                         embedding = self.recognize_face(aligned_image)
                         result = self.compare_faces(np.asarray(embedding,dtype=np.float32).flatten())
-                        if(result[0]>self.threshold):
-                            print(f"Detected: {result[1][2]} with local id {result[1][0]} at {result[0]} similarity score")
+                        response: str
+                        access = result[0]>self.threshold
+                        if(access):
+                            response = f"Detected: {result[1][2]} with local id {result[1][0]} at {result[0]} similarity score"
+                            print(response)
                         else:
-                            print(f"Face detected, no match in DB, max sim score: {result[0]}")
+                            response = f"Face detected, no match in DB, max sim score: {result[0]}"
+                            print(response)
+                        #fire and forget event
+                        asyncio.run_coroutine_threadsafe(eventConnectionService.publish(Event(direction="outbound",content=response, channel=eventConnectionService.channel), status="pending"))
+            
+                        if(access):
+                            #call child class that implements grantAccess interface and pass optional data. Here name for instance.
+                            accessGrantorExample.grantAccess(result[1][2])
+            
             except Exception as e:
                 print(e)
             finally:
