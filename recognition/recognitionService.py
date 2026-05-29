@@ -91,8 +91,13 @@ class RecognitionService:
 
     def detect_face(self):
         try:
+            time.sleep(10)
+            count_recognize = 0
+            count_loop = 0
+            interval = 100
+            end = time.time() + interval
             self.cap = cv2.VideoCapture(0,cv2.CAP_V4L2)
-            while self.thread_running:
+            while self.thread_running and time.time() < end:
                 try:
                     if not self.cap.isOpened():
                         print("No cam found")
@@ -109,7 +114,9 @@ class RecognitionService:
                     self.detector.setInputSize((w,h))
                     _, faces = self.detector.detect(frame)
                     print(faces)
+                    count_loop+=1
                     if faces is not None:
+                        count_recognize+=1
                         for face in faces:
                             landmarks = face[4:14].reshape(5,2).astype(np.float32)
                             transformation_matrix = SimilarityTransform.from_estimate(landmarks,self.reference_points)#cv2.estimateAffinePartial2D(landmarks,self.reference_points)
