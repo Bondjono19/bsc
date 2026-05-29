@@ -95,7 +95,6 @@ class RecognitionService:
         end = time.time() + interval
         detections = 0
         try:
-            self.cap = cv2.VideoCapture(0,cv2.CAP_V4L2)
             print("Registrered camera")
             print(end)
             print(time.time())
@@ -142,6 +141,8 @@ class RecognitionService:
                 except Exception as e:
                     print(e)
                     raise
+                finally:
+                    self.cap.release()
         except Exception as e:
             print(e)
             self.thread_running = False
