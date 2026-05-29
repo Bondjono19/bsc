@@ -76,8 +76,8 @@ class EventConnectionService:
                 async for message in self.pubsub.listen():
                     if message["type"] == "message":
                         await self.handleMessage(message["data"])
-            except (redis.exceptions.TimeoutError, asyncio.TimeoutError):
-                continue
+            #except (redis.exceptions.TimeoutError, asyncio.TimeoutError):
+            #    continue
             except Exception as e:
                     print(f"Error on connection to event broker, sleeping 10 and reconneting:{e}")
                     await asyncio.sleep(10)
