@@ -51,14 +51,17 @@ class EventConnectionService:
 
     async def reconnect(self) -> None:
         try:
-            await self.pubsub.aclose()
+            if self.pubsub:
+                await self.pubsub.aclose()
         except:
             pass
-        finally:
-            print("Trying reconnect")
-            await self.initialize()
-            if(await self.redis_instance.ping()):
-                print("Connectionn reached on ping")
+        print("Trying reconnect")
+        if self.redis_instance:
+            try:
+                if await self.redis_instance.ping():
+                    print("Connectionn reached on ping")
+            except Exception as e:
+                print(e)
 
     async def listen(self,channel: str) -> None:
         while True:
