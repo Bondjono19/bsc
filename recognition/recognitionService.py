@@ -90,7 +90,10 @@ class RecognitionService:
         return np.asarray(embedding[0],dtype=np.float32).flatten()
 
     def detect_face(self):
-        while self.thread_running:
+        count = 0
+        end = time.time() + 100
+        detections = 0
+        while self.thread_running and time.time() < end:
             try:
                 self.cap = cv2.VideoCapture(0,cv2.CAP_V4L2)
                 if not self.cap.isOpened():
@@ -109,6 +112,7 @@ class RecognitionService:
                 _, faces = self.detector.detect(frame)
                 print(faces)
                 if faces is not None:
+                    detections+=1
                     for face in faces:
                         landmarks = face[4:14].reshape(5,2).astype(np.float32)
                         transformation_matrix = SimilarityTransform.from_estimate(landmarks,self.reference_points)#cv2.estimateAffinePartial2D(landmarks,self.reference_points)
@@ -129,11 +133,12 @@ class RecognitionService:
                         if(access):
                             #call child class that implements grantAccess interface and pass optional data. Here name for instance.
                             accessGrantorExample.grantAccess(result[1][2])
-            
+                count+=1
             except Exception as e:
                 print(e)
             finally:
                 self.cap.release()
+        print(f"Did {count} iterations in 100 seconds with {detections} images where face(s) are detected")
     '''
         Comments on insert_face()
         Used during dev to insert faces into the system, not part of original architecture
