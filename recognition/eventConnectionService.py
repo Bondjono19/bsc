@@ -55,42 +55,50 @@ class EventConnectionService:
                 await self.pubsub.aclose()
         except:
             pass
-        print("Trying reconnect")
         if self.redis_instance:
             try:
                 if await self.redis_instance.ping():
                     print("Connectionn reached on ping")
             except Exception as e:
                 print(e)
-
+        else:
+            print("No redis instance, trying reconnect")
+            self.initialize()
     async def listen(self,channel: str) -> None:
         while True:
             try:
+                if not self.redis_instance:
+                    print("Error on connection to event broker, sleeping 10 and reconneting")
+                    await asyncio.sleep(10)
+                    await self.reconnect()
+                    continue
                 self.pubsub = self.redis_instance.pubsub()
                 await self.pubsub.subscribe(channel)
                 async for message in self.pubsub.listen():
                     if message["type"] == "message":
                         await self.handleMessage(message["data"])
             except (redis.exceptions.TimeoutError, asyncio.TimeoutError):
-                if(self.redis_instance.ping()):
+                if(await self.redis_instance.ping()):
                     continue
                 else:
                     print("Error on connection to event broker, sleeping 10 and reconneting")
                     await asyncio.sleep(10)
                     await self.reconnect()
-                    
+
     async def try_flush(self) -> None:
         while True:
-            eventSum = 0
-            if(self.redis_instance and await self.redis_instance.ping()):
-                events = await databaseManager.execute(select(Event).where(Event.status == "pending").where(Event.direction == "outbound"))
-                for event in events:
-                    try:
-                        event = await self.publish(event)
-                        eventSum+=1
-                    except:
-                        #log
-                        print("Failed to flush event")
+            try:
+                eventSum = 0
+                if(self.redis_instance and await self.redis_instance.ping()):
+                    events = await databaseManager.execute(select(Event).where(Event.status == "pending").where(Event.direction == "outbound"))
+                    for event in events:
+                        try:
+                            event = await self.publish(event)
+                            eventSum+=1
+                        except:
+                            print("failed to flush event:" + str(event))
+            except Exception as e:
+                print(f"flushing went wrong: {e}")
             if(eventSum>0):
                 print(f"Flushed {eventSum} events")
             await asyncio.sleep(30)
