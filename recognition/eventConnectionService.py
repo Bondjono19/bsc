@@ -33,11 +33,11 @@ class EventConnectionService:
             self.redis_instance = await redis.from_url(
                 f"redis://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}"
             )
+            await self.redis_instance.ping()
             self.pubsub = self.redis_instance.pubsub()
-        except:
+        except Exception as e:
+            print(e)
             print("Failed connnecting to event broker on (re)initialize")
-            pass
-            #log
     
     async def close(self) -> None:
         if self.listen_task:
