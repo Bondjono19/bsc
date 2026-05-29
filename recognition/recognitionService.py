@@ -125,7 +125,7 @@ class RecognitionService:
                                 response = f"Face detected, no match in DB, max sim score: {result[0]}"
                                 print(response)
                             #fire and forget event
-                            asyncio.run_coroutine_threadsafe(eventConnectionService.publish(Event(direction="outbound",content=response, channel=eventConnectionService.channel), status="pending"))
+                            asyncio.run_coroutine_threadsafe(eventConnectionService.publish(Event(direction="outbound",content=response, channel=eventConnectionService.channel,status="pending")))
             
                             if(access):
                                 #call child class that implements grantAccess interface and pass optional data. Here name for instance.
