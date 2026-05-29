@@ -91,10 +91,14 @@ class RecognitionService:
 
     def detect_face(self):
         count = 0
-        end = time.time() + 100
+        interval = 20
+        end = time.time() + interval
         detections = 0
         try:
             self.cap = cv2.VideoCapture(0,cv2.CAP_V4L2)
+            print("Registrered camera")
+            print(end)
+            print(time.time())
             while self.thread_running and time.time() < end:
                 try:
                     if not self.cap.isOpened():
