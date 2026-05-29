@@ -55,15 +55,13 @@ class EventConnectionService:
                 await self.pubsub.aclose()
         except:
             pass
-        if self.redis_instance:
-            try:
-                if await self.redis_instance.ping():
-                    print("Connectionn reached on ping")
-            except Exception as e:
+        try:
+            if self.redis_instance:
+                await self.redis_instance.aclose()
+        except Exception as e:
                 print(e)
-        else:
-            print("No redis instance, trying reconnect")
-            self.initialize()
+        print("trying reinitialize")
+        await self.initialize()
     async def listen(self,channel: str) -> None:
         while True:
             try:
@@ -78,10 +76,9 @@ class EventConnectionService:
                     if message["type"] == "message":
                         await self.handleMessage(message["data"])
             except (redis.exceptions.TimeoutError, asyncio.TimeoutError):
-                if(await self.redis_instance.ping()):
-                    continue
-                else:
-                    print("Error on connection to event broker, sleeping 10 and reconneting")
+                continue
+            except Exception as e:
+                    print(f"Error on connection to event broker, sleeping 10 and reconneting:{e}")
                     await asyncio.sleep(10)
                     await self.reconnect()
 
