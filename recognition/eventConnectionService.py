@@ -71,7 +71,7 @@ class EventConnectionService:
                     if message["type"] == "message":
                         await self.handleMessage(message["data"])
             except Exception as e:
-                logging.error(e)
+                print(e)
                 print("Error on connection to event broker, sleeping 10 and reconneting")
                 await asyncio.sleep(10)
                 await self.reconnect()
