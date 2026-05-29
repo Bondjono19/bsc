@@ -152,9 +152,9 @@ class RecognitionService:
                     highest_completion_time = t
                 if (t>0.5):
                     over_500ms.append(t)
-            ratio_percentage = over_500ms/len(recognition_completion_times)
+            ratio_percentage = (len(over_500ms)/len(recognition_completion_times))*100
             print(f"recognized a face {count_recognize} times in {count_loop} iterations for {interval} seconds")
-            print(f"Highest pipeline completion time was: {highest_completion_time}, and {over_500ms} were over 500ms. {ratio_percentage}% of pipeline runs took over 500ms")
+            print(f"Highest pipeline completion time was: {highest_completion_time}, and {len(over_500ms)} were over 500ms. {ratio_percentage}% of pipeline runs took over 500ms")
         except Exception as e:
             print(e)
             self.thread_running = False
