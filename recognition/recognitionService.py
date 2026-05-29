@@ -94,7 +94,7 @@ class RecognitionService:
             time.sleep(10)
             count_recognize = 0
             count_loop = 0
-            interval = 20
+            interval = 30
             end = time.time() + interval
             recognition_completion_times = []
             self.cap = cv2.VideoCapture(0,cv2.CAP_V4L2)
