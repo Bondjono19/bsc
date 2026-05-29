@@ -72,13 +72,13 @@ class EventConnectionService:
                     if message["type"] == "message":
                         await self.handleMessage(message["data"])
             except (redis.exceptions.TimeoutError, asyncio.TimeoutError):
-                continue
-            except Exception as e:
-                print(e)
-                print("Error on connection to event broker, sleeping 10 and reconneting")
-                await asyncio.sleep(10)
-                await self.reconnect()
-
+                if(self.redis_instance.ping()):
+                    continue
+                else:
+                    print("Error on connection to event broker, sleeping 10 and reconneting")
+                    await asyncio.sleep(10)
+                    await self.reconnect()
+                    
     async def try_flush(self) -> None:
         while True:
             eventSum = 0
