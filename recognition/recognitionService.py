@@ -93,54 +93,60 @@ class RecognitionService:
         count = 0
         end = time.time() + 100
         detections = 0
-        while self.thread_running and time.time() < end:
-            try:
-                self.cap = cv2.VideoCapture(0,cv2.CAP_V4L2)
-                if not self.cap.isOpened():
-                    print("No cam found")
-                    return
-                print("watching")
-                ret, frame = self.cap.read()
-                h,w, _ = frame.shape
-                if not (self.cap.isOpened()):
-                    print("broke loop, cap not open")
-                    break
-                if not ret:
-                    print("no ret")
-                    break
-                self.detector.setInputSize((w,h))
-                _, faces = self.detector.detect(frame)
-                print(faces)
-                if faces is not None:
-                    detections+=1
-                    for face in faces:
-                        landmarks = face[4:14].reshape(5,2).astype(np.float32)
-                        transformation_matrix = SimilarityTransform.from_estimate(landmarks,self.reference_points)#cv2.estimateAffinePartial2D(landmarks,self.reference_points)
-                        aligned_image = cv2.warpAffine(frame,transformation_matrix.params[0:2, :],(112,112))
-                        embedding = self.recognize_face(aligned_image)
-                        result = self.compare_faces(np.asarray(embedding,dtype=np.float32).flatten())
-                        response: str
-                        access = result[0]>self.threshold
-                        if(access):
-                            response = f"Detected: {result[1][2]} with local id {result[1][0]} at {result[0]} similarity score"
-                            print(response)
-                        else:
-                            response = f"Face detected, no match in DB, max sim score: {result[0]}"
-                            print(response)
-                        #fire and forget event
-                        asyncio.run_coroutine_threadsafe(eventConnectionService.publish(Event(direction="outbound",content=response, channel=eventConnectionService.channel), status="pending"))
+        try:
+            self.cap = cv2.VideoCapture(0,cv2.CAP_V4L2)
+            while self.thread_running and time.time() < end:
+                try:
+                    if not self.cap.isOpened():
+                        print("No cam found")
+                        break
+                    print("watching")
+                    ret, frame = self.cap.read()
+                    h,w, _ = frame.shape
+                    if not (self.cap.isOpened()):
+                        print("broke loop, cap not open")
+                        break
+                    if not ret:
+                        print("no ret")
+                        break
+                    self.detector.setInputSize((w,h))
+                    _, faces = self.detector.detect(frame)
+                    print(faces)
+                    if faces is not None:
+                        detections+=1
+                        for face in faces:
+                            landmarks = face[4:14].reshape(5,2).astype(np.float32)
+                            transformation_matrix = SimilarityTransform.from_estimate(landmarks,self.reference_points)#cv2.estimateAffinePartial2D(landmarks,self.reference_points)
+                            aligned_image = cv2.warpAffine(frame,transformation_matrix.params[0:2, :],(112,112))
+                            embedding = self.recognize_face(aligned_image)
+                            result = self.compare_faces(np.asarray(embedding,dtype=np.float32).flatten())
+                            response: str
+                            access = result[0]>self.threshold
+                            if(access):
+                                response = f"Detected: {result[1][2]} with local id {result[1][0]} at {result[0]} similarity score"
+                                print(response)
+                            else:
+                                response = f"Face detected, no match in DB, max sim score: {result[0]}"
+                                print(response)
+                            #fire and forget event
+                            asyncio.run_coroutine_threadsafe(eventConnectionService.publish(Event(direction="outbound",content=response, channel=eventConnectionService.channel), status="pending"))
             
-                        if(access):
-                            #call child class that implements grantAccess interface and pass optional data. Here name for instance.
-                            accessGrantorExample.grantAccess(result[1][2])
-                count+=1
-            except Exception as e:
-                print(e)
-            finally:
+                            if(access):
+                                #call child class that implements grantAccess interface and pass optional data. Here name for instance.
+                                accessGrantorExample.grantAccess(result[1][2])
+                    count+=1
+                except Exception as e:
+                    print(e)
+                    raise
+        except Exception as e:
+            print(e)
+            self.thread_running = False
+        finally:
+            if(self.cap.isOpened()):
                 self.cap.release()
         print(f"Did {count} iterations in 100 seconds with {detections} images where face(s) are detected")
     '''
-        Comments on insert_face()
+        Comments on insert_face():
         Used during dev to insert faces into the system, not part of original architecture
     '''
     def insert_face(self):
