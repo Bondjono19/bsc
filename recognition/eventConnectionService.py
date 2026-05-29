@@ -31,7 +31,7 @@ class EventConnectionService:
     async def initialize(self) -> None:
         try:
             self.redis_instance = await redis.from_url(
-                f"redis://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}"
+                f"redis://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}", socket_connect_timeout=5
             )
             await self.redis_instance.ping()
             self.pubsub = self.redis_instance.pubsub()
