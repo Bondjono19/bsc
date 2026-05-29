@@ -94,10 +94,12 @@ class RecognitionService:
             time.sleep(10)
             count_recognize = 0
             count_loop = 0
-            interval = 100
+            interval = 20
             end = time.time() + interval
+            recognition_completion_times = []
             self.cap = cv2.VideoCapture(0,cv2.CAP_V4L2)
             while self.thread_running and time.time() < end:
+                start_time = time.time()
                 try:
                     if not self.cap.isOpened():
                         print("No cam found")
@@ -140,7 +142,19 @@ class RecognitionService:
                 except Exception as e:
                     print(e)
                     raise
+                end_time = time.time()
+                elapsed_time = end_time-start_time
+                recognition_completion_times.append(elapsed_time)
+            highest_completion_time = 0
+            over_500ms = []
+            for t in recognition_completion_times:
+                if (t>highest_completion_time):
+                    highest_completion_time = t
+                if (t>0.5):
+                    over_500ms.append(t)
+            ratio_percentage = over_500ms/len(recognition_completion_times)
             print(f"recognized a face {count_recognize} times in {count_loop} iterations for {interval} seconds")
+            print(f"Highest pipeline completion time was: {highest_completion_time}, and {over_500ms} were over 500ms. {ratio_percentage}% of pipeline runs took over 500ms")
         except Exception as e:
             print(e)
             self.thread_running = False
