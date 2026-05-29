@@ -21,6 +21,7 @@ class EventConnectionService:
     
     async def __aenter__(self) -> "EventConnectionService":
         await self.initialize()
+        print("version20.27 ECS")
         self.listen_task = asyncio.create_task(self.listen(self.channel))
         self.publish_task = asyncio.create_task(self.try_flush())
         return self
