@@ -140,6 +140,7 @@ class RecognitionService:
                 except Exception as e:
                     print(e)
                     raise
+            print(f"recognized a face {count_recognize} times in {count_loop} iterations for {interval} seconds")
         except Exception as e:
             print(e)
             self.thread_running = False
