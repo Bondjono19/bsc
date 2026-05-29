@@ -148,7 +148,7 @@ class RecognitionService:
         finally:
             if(self.cap.isOpened()):
                 self.cap.release()
-        print(f"Did {count} iterations in 100 seconds with {detections} images where face(s) are detected")
+        print(f"Did {count} iterations in {interval} seconds with {detections} images where face(s) are detected")
     '''
         Comments on insert_face():
         Used during dev to insert faces into the system, not part of original architecture
