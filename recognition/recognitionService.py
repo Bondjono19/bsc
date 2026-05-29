@@ -100,6 +100,7 @@ class RecognitionService:
             print(time.time())
             while self.thread_running and time.time() < end:
                 try:
+                    self.cap = cv2.VideoCapture(0,cv2.CAP_V4L2)
                     if not self.cap.isOpened():
                         print("No cam found")
                         break
