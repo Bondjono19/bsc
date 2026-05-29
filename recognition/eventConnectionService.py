@@ -66,6 +66,7 @@ class EventConnectionService:
     async def listen(self,channel: str) -> None:
         while True:
             try:
+                self.pubsub = self.redis_instance.pubsub()
                 await self.pubsub.subscribe(channel)
                 async for message in self.pubsub.listen():
                     if message["type"] == "message":
