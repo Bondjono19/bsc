@@ -2,10 +2,17 @@
 
 ## Setup
 Setup assumes database is set up with identities already.      
-Otherwise run the setup with the detection_mode in recognition/recognitionService.py set to false. Not tested thoroughly, some manual code config might be necessary.      
+Otherwise run the setup with the detection_mode in recognition/recognitionService.py set to false. Not tested thoroughly, some manual code config might be necessary.
+
+
 
 Only tested on Rasberry Pi 4
 
 from root folder run:       
-docker compose -f deploy/docker-compose.yml --env-file .env.example up --build
+docker compose -f deploy/docker-compose.yml --env-file .env.example up --build      
 
+Useful commands:
+* docker compose -f deploy/docker-compose.yml --env-file .env.example up    
+from deploy folder:
+* docker compose --env-file ./../.env.example down recognition
+* docker compose --env-file ./../.env.example run recognition
