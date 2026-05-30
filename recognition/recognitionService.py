@@ -100,6 +100,8 @@ class RecognitionService:
                         print("No cam found")
                         break
                     print("watching")
+                    for _ in range(5):
+                        self.cap.grab()
                     ret, frame = self.cap.read()
                     h,w, _ = frame.shape
                     if not (self.cap.isOpened()):
