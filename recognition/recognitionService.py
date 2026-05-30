@@ -94,6 +94,7 @@ class RecognitionService:
             self.cap = cv2.VideoCapture(0,cv2.CAP_V4L2)
             while self.thread_running:
                 try:
+                    input("Type anything to capture")
                     if not self.cap.isOpened():
                         print("No cam found")
                         break
@@ -108,9 +109,9 @@ class RecognitionService:
                         break
                     self.detector.setInputSize((w,h))
                     _, faces = self.detector.detect(frame)
-                    print(faces)
                     if faces is not None:
                         for face in faces:
+                            print(f"Face properties: {face}")
                             landmarks = face[4:14].reshape(5,2).astype(np.float32)
                             transformation_matrix = SimilarityTransform.from_estimate(landmarks,self.reference_points)#cv2.estimateAffinePartial2D(landmarks,self.reference_points)
                             aligned_image = cv2.warpAffine(frame,transformation_matrix.params[0:2, :],(112,112))
@@ -160,11 +161,10 @@ class RecognitionService:
                     break
                 self.detector.setInputSize((w,h))
                 _, faces = recognitionService.detector.detect(frame)
-                print(faces)
                 if faces is not None:
                     for face in faces:
                         landmarks = face[4:14].reshape(5,2).astype(np.float32)
-                        transformation_matrix = cv2.estimateAffinePartial2D(landmarks,recognitionService.reference_points)
+                        transformation_matrix = SimilarityTransform.from_estimate(landmarks,self.reference_points)#cv2.estimateAffinePartial2D(landmarks,self.reference_points)
                         aligned_image = cv2.warpAffine(frame,transformation_matrix[0],(112,112))
                         embedding = recognitionService.recognize_face(aligned_image)
                         p_list = embedding.tolist()
