@@ -92,6 +92,7 @@ class RecognitionService:
     def detect_face(self):
         try:
             self.cap = cv2.VideoCapture(0,cv2.CAP_V4L2)
+            self.cap.set(cv2.CAP_PROP_BUFFERSIZE, 1)
             while self.thread_running:
                 try:
                     input("Type anything to capture")
@@ -133,7 +134,7 @@ class RecognitionService:
                                 accessGrantorExample.grantAccess(result[1][2])
                 except Exception as e:
                     print(e)
-                    raise
+                    
         except Exception as e:
             print(e)
             self.thread_running = False
