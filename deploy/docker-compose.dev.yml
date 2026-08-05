@@ -1,6 +1,7 @@
 services:
   api:
-    image: ghcr.io/bondjono19/bsc:latest
+    build:
+      context: ./../
     environment:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_PORT=${POSTGRES_PORT}

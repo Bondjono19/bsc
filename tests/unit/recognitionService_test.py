@@ -1,7 +1,69 @@
 import pytest
-from recognition.recognitionService import recognitionService
+from recognition.recognitionService import recognitionService, RecognitionService
 from shared.database.models import Identity, Embedding
 import numpy as np
+
+
+def _fresh_service():
+    service = RecognitionService(True)
+    service.identities = []
+    return service
+
+
+def test_compare_identical_vectors_is_one():
+    service = _fresh_service()
+    v = np.asarray([1.0, 2.0, 3.0], dtype=np.float32)
+    assert service.compare(v, v) == pytest.approx(1.0, abs=1e-6)
+
+
+def test_compare_orthogonal_vectors_is_zero():
+    service = _fresh_service()
+    a = np.asarray([1.0, 0.0], dtype=np.float32)
+    b = np.asarray([0.0, 1.0], dtype=np.float32)
+    assert service.compare(a, b) == pytest.approx(0.0, abs=1e-6)
+
+
+def test_compare_opposite_vectors_is_negative_one():
+    service = _fresh_service()
+    a = np.asarray([1.0, 1.0], dtype=np.float32)
+    b = np.asarray([-1.0, -1.0], dtype=np.float32)
+    assert service.compare(a, b) == pytest.approx(-1.0, abs=1e-6)
+
+
+def test_compare_faces_with_no_identities_returns_no_match():
+    service = _fresh_service()
+    q = np.asarray([0.1, 0.2, 0.3], dtype=np.float32)
+    best = service.compare_faces(q)
+    assert best == [0, None]
+
+
+def test_compare_faces_picks_highest_similarity():
+    service = _fresh_service()
+    q = np.asarray([1.0, 0.0, 0.0], dtype=np.float32)
+    service.identities = [
+        (1, 10, "Away", np.asarray([0.0, 1.0, 0.0], dtype=np.float32)),
+        (2, 20, "Match", np.asarray([1.0, 0.0, 0.0], dtype=np.float32)),
+    ]
+    best = service.compare_faces(q)
+    assert best[0] == pytest.approx(1.0, abs=1e-6)
+    assert best[1][2] == "Match"
+
+
+def test_preprocess_tensor_shape_and_range():
+    service = _fresh_service()
+    # Black and white BGR frames map to the -1..1 normalized range.
+    black = np.zeros((112, 112, 3), dtype=np.uint8)
+    white = np.full((112, 112, 3), 255, dtype=np.uint8)
+
+    black_t = service.preprocess_tensor(black)
+    white_t = service.preprocess_tensor(white)
+
+    assert black_t.shape == (1, 3, 112, 112)
+    assert black_t.dtype == np.float32
+    assert black_t.min() == pytest.approx(-1.0)
+    assert white_t.max() == pytest.approx(1.0)
+
+
 def test_compare_faces():
     
     vects = np.asarray([ 3.1716e-03, -1.3512e-02,  1.6123e-02, -9.0370e-04,  1.4165e-02,

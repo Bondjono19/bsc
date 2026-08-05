@@ -2,6 +2,7 @@ import cv2
 import numpy as np
 import time
 import os
+import json
 from cv2.typing import MatLike
 import onnxruntime as oxrt
 import asyncio
@@ -179,5 +180,14 @@ class RecognitionService:
                 print(e)
             finally:
                 self.cap.release()
+
+    #def insert_identities(self):
+    #    LFW = "./lfw"
+    #    TRACKER_FILE = "tracker.json"
+    #   MIN_IMAGES = 2
+    #    while self.thread_running:
+    #        try:
+                #fetch faces
+
 
 recognitionService = RecognitionService(True)
