@@ -46,4 +46,4 @@ jobs:
             file: Dockerfile
             platforms: linux/amd64,linux/arm64
             push: true
-            tags: ghcr.io/${{ github.repository_owner }}/bsc:latest
+            tags: ghcr.io/bondjono19/bsc:latest
