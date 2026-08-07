@@ -1,11 +1,22 @@
 import pytest
-from recognition.recognitionService import recognitionService, RecognitionService
+from unittest.mock import AsyncMock, MagicMock
+
+from recognition.recognitionService import RecognitionService
+from recognition.accessGrantor import AccessGrantor
+from recognition.eventConnectionService import EventConnectionService
+from shared.database.databaseManager import DatabaseManager
 from shared.database.models import Identity, Embedding
 import numpy as np
 
 
 def _fresh_service():
-    service = RecognitionService(True)
+
+    service = RecognitionService(
+        detection_mode=True,
+        access_grantor=MagicMock(spec=AccessGrantor),
+        database_manager=AsyncMock(spec=DatabaseManager),
+        eventConnectionService=AsyncMock(spec=EventConnectionService),
+    )
     service.identities = []
     return service
 
@@ -65,7 +76,7 @@ def test_preprocess_tensor_shape_and_range():
 
 
 def test_compare_faces():
-    
+    service = _fresh_service()
     vects = np.asarray([ 3.1716e-03, -1.3512e-02,  1.6123e-02, -9.0370e-04,  1.4165e-02,
          -5.1862e-04,  1.9080e-02, -7.7028e-04,  3.4184e-03,  2.4998e-02,
          -1.3043e-03, -1.7152e-02, -1.4104e-02,  1.5793e-02, -8.3670e-03,
@@ -170,7 +181,7 @@ def test_compare_faces():
           8.7990e-03,  2.1793e-02, -1.3229e-02,  6.1883e-04, -2.5666e-02,
           2.1506e-02,  2.2508e-03], dtype=np.float32)
     
-    recognitionService.identities = [(5,5, "Messi", vects)]
+    service.identities = [(5,5, "Messi", vects)]
     
     q = np.asarray([ 5.7937e-03,  3.0098e-03,  5.8220e-03, -1.5987e-02, -8.8841e-03,
          -8.4355e-04,  2.0357e-02, -4.4554e-03, -1.7147e-02,  3.3722e-03,
@@ -276,7 +287,7 @@ def test_compare_faces():
           9.3223e-03,  8.3634e-03,  6.1210e-04,  1.1217e-02, -1.7849e-02,
           2.1636e-02, -1.1231e-02],np.float32)
     
-    comp = recognitionService.compare_faces(q)
+    comp = service.compare_faces(q)
 
     assert comp[0] > 0.5
     assert comp[1][2] == "Messi"

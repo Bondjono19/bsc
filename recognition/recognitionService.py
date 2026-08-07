@@ -8,16 +8,16 @@ import onnxruntime as oxrt
 import asyncio
 import traceback
 from recognition.utils.get_points import get_reference_points
-from shared.database.databaseManager import databaseManager
+from shared.database.databaseManager import DatabaseManager
 from shared.database.models import Identity,Embedding, Event
-from recognition.eventConnectionService import eventConnectionService
+from recognition.eventConnectionService import EventConnectionService
 from recognition.accessGrantor import AccessGrantor
 from skimage.transform import SimilarityTransform
 MODELS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
 
 
 class RecognitionService:
-    def __init__(self, detection_mode: bool,access_grantor: AccessGrantor):
+    def __init__(self, detection_mode: bool,access_grantor: AccessGrantor,database_manager: DatabaseManager, eventConnectionService: EventConnectionService):
         self.detection_mode = detection_mode
         self.camera_dimensions = (640,480)
         self.model_path = os.path.join(MODELS_DIR, "edgeface_xs_gamme_06.onnx")
@@ -31,6 +31,8 @@ class RecognitionService:
         self.threshold = 0.5
         self.loop = None
         self.accessGrantor = access_grantor
+        self.databaseManager = database_manager
+        self.eventConnectionService = eventConnectionService
 
     async def __aenter__(self):
         self.detector = cv2.FaceDetectorYN.create(os.path.join(MODELS_DIR, "face_detection_yunet_2023mar.onnx"),"",self.camera_dimensions)
@@ -48,7 +50,7 @@ class RecognitionService:
         return self
     
     async def load_identites(self):
-        identities = await databaseManager.fetchAll(Identity, Identity.embeddings)
+        identities = await self.databaseManager.fetchAll(Identity, Identity.embeddings)
         if identities is not None:
             for identity in identities:
                 embeddings = identity.embeddings
@@ -127,7 +129,7 @@ class RecognitionService:
                                 response = f"Face detected, no match in DB, max sim score: {result[0]}"
                                 print(response)
                             #fire and forget event
-                            asyncio.run_coroutine_threadsafe(eventConnectionService.publish(Event(direction="outbound",content=response, channel=eventConnectionService.channel,status="pending")),self.loop)
+                            asyncio.run_coroutine_threadsafe(self.eventConnectionService.publish(Event(direction="outbound",content=response, channel=self.eventConnectionService.channel,status="pending")),self.loop)
             
                             if(access):
                                 #call child class that implements grantAccess interface and pass optional data. Here name for instance.
@@ -145,7 +147,7 @@ class RecognitionService:
         Comments on insert_face()
         Used during dev to insert faces into the system, not part of original architecture
     '''
-    def insert_face(self):
+    '''def insert_face(self):
         while self.thread_running:
             try:
                 self.cap = cv2.VideoCapture(0,cv2.CAP_V4L2)
@@ -188,4 +190,4 @@ class RecognitionService:
     #   MIN_IMAGES = 2
     #    while self.thread_running:
     #        try:
-                #fetch faces
+                #fetch faces'''

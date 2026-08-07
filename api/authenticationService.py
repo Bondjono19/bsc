@@ -5,7 +5,7 @@ import hashlib
 
 class AuthenticationService:
     def __init__(self, databaseManager: DatabaseManager) -> None:
-        self.databaseManager = DatabaseManager
+        self.databaseManager = databaseManager
     async def verifyToken(self, token: str) -> bool:
         stripToken = lambda token: token.split()[1]
         try:

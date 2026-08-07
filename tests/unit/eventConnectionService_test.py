@@ -6,22 +6,18 @@ from recognition.eventConnectionService import EventConnectionService
 from shared.database.models import Event
 
 
-def test_init_channel():
-    service = EventConnectionService("channelName")
+def test_init_channel(fake_db):
+    service = EventConnectionService("channelName", fake_db)
     assert service.channel == "channelName"
     assert service.redis_instance is None
     assert service.pubsub is None
     assert service.listen_task is None
+    assert service.databaseManager is fake_db
 
 
-async def test_publish_success_marks_published_and_persists(monkeypatch):
-    service = EventConnectionService("recognitionChannel")
+async def test_publish_success_marks_published_and_persists(fake_db):
+    service = EventConnectionService("recognitionChannel", fake_db)
     service.redis_instance = AsyncMock()
-
-    update = AsyncMock()
-    monkeypatch.setattr(
-        "recognition.eventConnectionService.databaseManager.update", update
-    )
 
     event = Event(
         direction="outbound",
@@ -37,18 +33,13 @@ async def test_publish_success_marks_published_and_persists(monkeypatch):
         "recognitionChannel", "Detected: Messi"
     )
     # The event is always persisted (finally block), even on success.
-    update.assert_awaited_once_with(event)
+    fake_db.update.assert_awaited_once_with(event)
 
 
-async def test_publish_failure_reverts_to_pending_and_raises(monkeypatch):
-    service = EventConnectionService("recognitionChannel")
+async def test_publish_failure_reverts_to_pending_and_raises(fake_db):
+    service = EventConnectionService("recognitionChannel", fake_db)
     service.redis_instance = AsyncMock()
     service.redis_instance.publish.side_effect = ConnectionError("broker down")
-
-    update = AsyncMock()
-    monkeypatch.setattr(
-        "recognition.eventConnectionService.databaseManager.update", update
-    )
 
     event = Event(
         direction="outbound",
@@ -62,23 +53,23 @@ async def test_publish_failure_reverts_to_pending_and_raises(monkeypatch):
 
     # Status stays pending so try_flush can retry it later.
     assert event.status == "pending"
-    update.assert_awaited_once_with(event)
+    fake_db.update.assert_awaited_once_with(event)
 
 
-async def test_handle_message_parses_json_without_error():
-    service = EventConnectionService("recognitionChannel")
+async def test_handle_message_parses_json_without_error(fake_db):
+    service = EventConnectionService("recognitionChannel", fake_db)
     # Currently a no-op that must at least accept valid JSON payloads.
     assert await service.handleMessage('{"foo": "bar"}') is None
 
 
-async def test_handle_message_raises_on_invalid_json():
-    service = EventConnectionService("recognitionChannel")
+async def test_handle_message_raises_on_invalid_json(fake_db):
+    service = EventConnectionService("recognitionChannel", fake_db)
     with pytest.raises(ValueError):
         await service.handleMessage("not json")
 
 
-async def test_initialize_swallows_connection_errors(monkeypatch):
-    service = EventConnectionService("recognitionChannel")
+async def test_initialize_swallows_connection_errors(monkeypatch, fake_db):
+    service = EventConnectionService("recognitionChannel", fake_db)
 
     async def boom(*args, **kwargs):
         raise ConnectionError("cannot reach redis")
@@ -92,8 +83,8 @@ async def test_initialize_swallows_connection_errors(monkeypatch):
     assert service.redis_instance is None
 
 
-async def test_close_cancels_tasks_and_closes_connections():
-    service = EventConnectionService("recognitionChannel")
+async def test_close_cancels_tasks_and_closes_connections(fake_db):
+    service = EventConnectionService("recognitionChannel", fake_db)
     # asyncio Task.cancel() is synchronous.
     service.listen_task = MagicMock()
     service.publish_task = MagicMock()

@@ -4,8 +4,7 @@ import pytest
 import pytest_asyncio
 from httpx import ASGITransport, AsyncClient
 
-from api.main import app
-from api.authenticationService import authenticationService
+from api.main import app, authenticationService
 
 
 @pytest_asyncio.fixture

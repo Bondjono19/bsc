@@ -3,12 +3,12 @@ import os
 import asyncio
 import logging
 import json
-from shared.database.databaseManager import databaseManager
+from shared.database.databaseManager import DatabaseManager
 from shared.database.models import Event
 from sqlalchemy import select
 
 class EventConnectionService:
-    def __init__(self, channel: str):
+    def __init__(self, channel: str,database_manager: DatabaseManager):
         self.channel = channel
         self.redis_instance = None
         self.pubsub = None
@@ -17,6 +17,7 @@ class EventConnectionService:
         self.REDIS_PORT = os.getenv("REDIS_PORT")
         self.REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
         self.connectedOnPublish = None
+        self.databaseManager = database_manager
         #self.REDIS_CERT_REQUIRED = os.getenv("REDIS_CERT_REQUIRED")
     
     async def __aenter__(self) -> "EventConnectionService":
@@ -88,7 +89,7 @@ class EventConnectionService:
             try:
                 eventSum = 0
                 if(self.redis_instance and await self.redis_instance.ping()):
-                    events = await databaseManager.execute(select(Event).where(Event.status == "pending").where(Event.direction == "outbound"))
+                    events = await self.databaseManager.execute(select(Event).where(Event.status == "pending").where(Event.direction == "outbound"))
                     for event in events:
                         try:
                             event = await self.publish(event)
@@ -111,7 +112,7 @@ class EventConnectionService:
             event.status = "pending"
             raise
         finally:
-            await databaseManager.update(event)
+            await self.databaseManager.update(event)
         return event
 
 

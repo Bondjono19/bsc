@@ -8,8 +8,8 @@ class IdentityRouter:
     def __init__(self,identityService: IdentityService):
         self.identityService = identityService
         self.router = APIRouter(prefix="/identities")
-        self.router.add_api_route("/create",self.addIdentity)
-        self.router.add_api_route("/remove",self.removeIdentity)
+        self.router.add_api_route("/create",self.addIdentity,methods=["POST"])
+        self.router.add_api_route("/remove",self.removeIdentity,methods=["DELETE"])
 
     async def addIdentity(self,request: Request):
         '''

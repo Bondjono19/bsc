@@ -1,43 +1,45 @@
 from unittest.mock import AsyncMock
 
-from api.authenticationService import authenticationService
+from api.authenticationService import AuthenticationService
 from shared.database.models import AuthToken
 
 
-async def test_valid_bearer_token_returns_true(monkeypatch):
+async def test_valid_bearer_token_returns_true(fake_db):
     # DB returns a matching token row -> authorized.
-    execute = AsyncMock(return_value=[AuthToken(token="secret", description="test")])
-    monkeypatch.setattr("api.authenticationService.databaseManager.execute", execute)
+    fake_db.execute = AsyncMock(
+        return_value=[AuthToken(token="secret", description="test")]
+    )
+    service = AuthenticationService(fake_db)
 
-    assert await authenticationService.verifyToken("Bearer secret") is True
-    execute.assert_awaited_once()
-
-
-async def test_unknown_token_returns_false(monkeypatch):
-    execute = AsyncMock(return_value=[])
-    monkeypatch.setattr("api.authenticationService.databaseManager.execute", execute)
-
-    assert await authenticationService.verifyToken("Bearer nope") is False
+    assert await service.verifyToken("Bearer secret") is True
+    fake_db.execute.assert_awaited_once()
 
 
-async def test_malformed_header_without_scheme_returns_false(monkeypatch):
+async def test_unknown_token_returns_false(fake_db):
+    fake_db.execute = AsyncMock(return_value=[])
+    service = AuthenticationService(fake_db)
+
+    assert await service.verifyToken("Bearer nope") is False
+
+
+async def test_malformed_header_without_scheme_returns_false(fake_db):
     # No space to split on -> stripToken raises -> False, DB never queried.
-    execute = AsyncMock(return_value=[AuthToken(token="secret")])
-    monkeypatch.setattr("api.authenticationService.databaseManager.execute", execute)
+    fake_db.execute = AsyncMock(return_value=[AuthToken(token="secret")])
+    service = AuthenticationService(fake_db)
 
-    assert await authenticationService.verifyToken("secret") is False
-    execute.assert_not_awaited()
-
-
-async def test_none_header_returns_false(monkeypatch):
-    execute = AsyncMock(return_value=[])
-    monkeypatch.setattr("api.authenticationService.databaseManager.execute", execute)
-
-    assert await authenticationService.verifyToken(None) is False
-    execute.assert_not_awaited()
+    assert await service.verifyToken("secret") is False
+    fake_db.execute.assert_not_awaited()
 
 
-async def test_only_second_part_of_header_is_used_as_token(monkeypatch):
+async def test_none_header_returns_false(fake_db):
+    fake_db.execute = AsyncMock(return_value=[])
+    service = AuthenticationService(fake_db)
+
+    assert await service.verifyToken(None) is False
+    fake_db.execute.assert_not_awaited()
+
+
+async def test_only_second_part_of_header_is_used_as_token(fake_db):
     # "Bearer <token>" -> the query should filter on the stripped token.
     captured = {}
 
@@ -45,10 +47,9 @@ async def test_only_second_part_of_header_is_used_as_token(monkeypatch):
         captured["query"] = query
         return [AuthToken(token="abc")]
 
-    monkeypatch.setattr(
-        "api.authenticationService.databaseManager.execute", fake_execute
-    )
+    fake_db.execute = fake_execute
+    service = AuthenticationService(fake_db)
 
-    assert await authenticationService.verifyToken("Bearer abc") is True
+    assert await service.verifyToken("Bearer abc") is True
     # The generated statement compiles against the auth_tokens table.
     assert "auth_tokens" in str(captured["query"])

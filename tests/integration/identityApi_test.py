@@ -3,8 +3,7 @@ from unittest.mock import AsyncMock
 
 import pytest
 
-from api.authenticationService import authenticationService
-from api.identityService import identityService
+from api.main import authenticationService, identityService
 from tests.integration.conftest import AUTH_HEADERS
 
 

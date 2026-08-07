@@ -8,7 +8,6 @@ import json
 class IdentityService:
     def __init__(self,databaseManager: DatabaseManager):
         self.databaseManager = databaseManager
-        pass
     async def addIdentity(self, global_id: str, name: str, embeddings: list[list[float]]) -> Identity:
         try:
             if not embeddings == None:

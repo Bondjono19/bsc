@@ -64,10 +64,17 @@ class FakeSession:
 
 
 def session_factory(session):
-    """Return a callable that DatabaseManager can use as AsyncSessionLocal."""
     return MagicMock(return_value=session)
 
 
 @pytest.fixture
 def fake_session():
     return FakeSession()
+
+
+@pytest.fixture
+def fake_db():
+
+    from shared.database.databaseManager import DatabaseManager
+
+    return AsyncMock(spec=DatabaseManager)

@@ -1,10 +1,10 @@
 from unittest.mock import AsyncMock
 
-from api.identityService import identityService
+from api.identityService import IdentityService
 from shared.database.models import Identity
 
 
-async def test_add_identity_with_embeddings(monkeypatch):
+async def test_add_identity_with_embeddings(fake_db):
     captured = {}
 
     async def fake_add(obj):
@@ -12,9 +12,10 @@ async def test_add_identity_with_embeddings(monkeypatch):
         obj.id = 42
         return obj
 
-    monkeypatch.setattr("api.identityService.databaseManager.add", fake_add)
+    fake_db.add = fake_add
+    service = IdentityService(fake_db)
 
-    result = await identityService.addIdentity(
+    result = await service.addIdentity(
         global_id="00001234", name="John Doe", embeddings=[[0.0] * 512, [1.0] * 512]
     )
 
@@ -27,16 +28,17 @@ async def test_add_identity_with_embeddings(monkeypatch):
     assert added.embeddings[0].vector == [0.0] * 512
 
 
-async def test_add_identity_without_embeddings(monkeypatch):
+async def test_add_identity_without_embeddings(fake_db):
     captured = {}
 
     async def fake_add(obj):
         captured["obj"] = obj
         return obj
 
-    monkeypatch.setattr("api.identityService.databaseManager.add", fake_add)
+    fake_db.add = fake_add
+    service = IdentityService(fake_db)
 
-    result = await identityService.addIdentity(
+    result = await service.addIdentity(
         global_id="55", name="No Embeds", embeddings=None
     )
 
@@ -44,25 +46,25 @@ async def test_add_identity_without_embeddings(monkeypatch):
     assert result.embeddings == []
 
 
-async def test_add_identity_returns_none_on_db_error(monkeypatch):
-    add = AsyncMock(side_effect=RuntimeError("unique violation"))
-    monkeypatch.setattr("api.identityService.databaseManager.add", add)
+async def test_add_identity_returns_none_on_db_error(fake_db):
+    fake_db.add = AsyncMock(side_effect=RuntimeError("unique violation"))
+    service = IdentityService(fake_db)
 
-    result = await identityService.addIdentity("1", "dup", [[0.0] * 512])
+    result = await service.addIdentity("1", "dup", [[0.0] * 512])
 
     assert result is None
 
 
-async def test_remove_identity_delegates_to_db(monkeypatch):
-    remove = AsyncMock(return_value=True)
-    monkeypatch.setattr("api.identityService.databaseManager.remove", remove)
+async def test_remove_identity_delegates_to_db(fake_db):
+    fake_db.remove = AsyncMock(return_value=True)
+    service = IdentityService(fake_db)
 
-    assert await identityService.removeIdentity(7) is True
-    remove.assert_awaited_once_with(7, Identity)
+    assert await service.removeIdentity(7) is True
+    fake_db.remove.assert_awaited_once_with(7, Identity)
 
 
-async def test_remove_identity_returns_false_when_missing(monkeypatch):
-    remove = AsyncMock(return_value=False)
-    monkeypatch.setattr("api.identityService.databaseManager.remove", remove)
+async def test_remove_identity_returns_false_when_missing(fake_db):
+    fake_db.remove = AsyncMock(return_value=False)
+    service = IdentityService(fake_db)
 
-    assert await identityService.removeIdentity(999) is False
+    assert await service.removeIdentity(999) is False
