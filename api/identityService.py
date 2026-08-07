@@ -1,4 +1,4 @@
-from shared.database.databaseManager import databaseManager
+from shared.database.databaseManager import DatabaseManager
 from sqlalchemy import insert
 from shared.database.models import Identity,Embedding
 from typing import Type
@@ -6,6 +6,9 @@ import logging
 import json
 
 class IdentityService:
+    def __init__(self,databaseManager: DatabaseManager):
+        self.databaseManager = databaseManager
+        pass
     async def addIdentity(self, global_id: str, name: str, embeddings: list[list[float]]) -> Identity:
         try:
             if not embeddings == None:
@@ -15,13 +18,12 @@ class IdentityService:
                 identity = Identity(global_id=global_id,name=name,embeddings=embedding_objs)
             else:
                 identity = Identity(global_id=global_id,name=name)
-            identity = await databaseManager.add(identity)
+            identity = await self.databaseManager.add(identity)
             return identity
         except Exception as e:
             logging.error(e)
             return None
         
     async def removeIdentity(self,identityId: int) -> bool:
-        return await databaseManager.remove(identityId,Identity)
+        return await self.databaseManager.remove(identityId,Identity)
         
-identityService = IdentityService()
