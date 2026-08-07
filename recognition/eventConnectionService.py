@@ -121,4 +121,3 @@ class EventConnectionService:
         #Store event in DB
         return
         
-eventConnectionService = EventConnectionService("recognitionChannel")

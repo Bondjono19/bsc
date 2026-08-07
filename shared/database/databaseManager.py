@@ -73,5 +73,3 @@ class DatabaseManager:
         tkn = AuthToken(token="token",description="test")
         await self.add(tkn)
         print("added idenntity")
-
-databaseManager = DatabaseManager()

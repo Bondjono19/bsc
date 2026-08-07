@@ -10,5 +10,5 @@ tensor = torch.randn(1,3,112,112)
 torch.onnx.export(
     model=model,
    args=tensor,
-   f="edgeface_xs_gamme_06.onnx"
+   f="edgeface_xs_gamma_06.onnx"
 )

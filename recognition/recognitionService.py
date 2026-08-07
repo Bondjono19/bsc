@@ -11,13 +11,13 @@ from recognition.utils.get_points import get_reference_points
 from shared.database.databaseManager import databaseManager
 from shared.database.models import Identity,Embedding, Event
 from recognition.eventConnectionService import eventConnectionService
-from recognition.accessGrantor import accessGrantorExample
+from recognition.accessGrantor import AccessGrantor
 from skimage.transform import SimilarityTransform
 MODELS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
 
 
 class RecognitionService:
-    def __init__(self, detection_mode: bool):
+    def __init__(self, detection_mode: bool,access_grantor: AccessGrantor):
         self.detection_mode = detection_mode
         self.camera_dimensions = (640,480)
         self.model_path = os.path.join(MODELS_DIR, "edgeface_xs_gamme_06.onnx")
@@ -30,6 +30,7 @@ class RecognitionService:
         self.all_identities = None
         self.threshold = 0.5
         self.loop = None
+        self.accessGrantor = access_grantor
 
     async def __aenter__(self):
         self.detector = cv2.FaceDetectorYN.create(os.path.join(MODELS_DIR, "face_detection_yunet_2023mar.onnx"),"",self.camera_dimensions)
@@ -130,7 +131,7 @@ class RecognitionService:
             
                             if(access):
                                 #call child class that implements grantAccess interface and pass optional data. Here name for instance.
-                                accessGrantorExample.grantAccess(result[1][2])
+                                self.accessGrantor.grantAccess(result[1][2])
                 except Exception as e:
                     print(e)
                     raise
@@ -188,6 +189,3 @@ class RecognitionService:
     #    while self.thread_running:
     #        try:
                 #fetch faces
-
-
-recognitionService = RecognitionService(True)
