@@ -13,9 +13,12 @@ from shared.database.models import Identity,Embedding, Event
 from recognition.eventConnectionService import EventConnectionService
 from recognition.accessGrantor import AccessGrantor
 from skimage.transform import SimilarityTransform
+from datasets import load_dataset
+
 MODELS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
-
-
+GALLERY_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "utils", "gallery.txt")
+PROBES_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),"utils","random_probes.txt")
+VALID_NAMES_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),"utils","valid_names.txt")
 class RecognitionService:
     def __init__(self, detection_mode: bool,access_grantor: AccessGrantor,database_manager: DatabaseManager, eventConnectionService: EventConnectionService):
         self.detection_mode = detection_mode
@@ -41,12 +44,11 @@ class RecognitionService:
         self.identities = []
         self.loop = asyncio.get_running_loop()
         await self.load_identites()
+        self.thread_running = True
         if(self.detection_mode):
             self.thread = asyncio.create_task(asyncio.to_thread(self.detect_face))
-            self.thread_running = True
         else:
-            self.thread = asyncio.create_task(asyncio.to_thread(self.insert_face))
-            self.thread_running = True
+            self.thread = asyncio.create_task(asyncio.to_thread(self.run_probes))
         return self
     
     async def load_identites(self):
@@ -57,6 +59,7 @@ class RecognitionService:
                 for embedding in embeddings:
                     vector = np.asarray(embedding.vector,dtype=np.float32)
                     self.identities.append((identity.id,identity.global_id,identity.name,vector))
+        print(f"Loaded {len(self.identities)} identity embeddings")
 
     async def __aexit__(self, exc_type, exc, tb):
         self.thread_running = False
@@ -143,6 +146,81 @@ class RecognitionService:
         finally:
             if(self.cap.isOpened()):
                 self.cap.release()
+
+    def insert_gallery(self):
+        print("running gal")
+        with open(GALLERY_PATH,"r") as f:
+            names = [line.strip() for line in f]
+        print("downloading dataset")
+        dataset = load_dataset("bitmind/lfw")
+        print("done")
+        data = dataset["train"]
+        while self.thread_running:
+            print("started insertion")
+            try:
+                for name in names:
+                    match = data.filter(lambda x: x["filename"] == name)
+                    img = match[0]["image"]
+                    cv_img = np.array(img)
+                    cv_img = cv2.cvtColor(cv_img,cv2.COLOR_RGB2BGR)
+                    h,w,_ = cv_img.shape
+                    self.detector.setInputSize((w,h))
+                    _, faces = self.detector.detect(cv_img)
+                    if faces is not None:
+                        for face in faces:
+                            landmarks = face[4:14].reshape(5,2).astype(np.float32)
+                            transformation_matrix = SimilarityTransform.from_estimate(landmarks,self.reference_points)
+                            aligned_image = cv2.warpAffine(cv_img,transformation_matrix.params[0:2, :],(112,112))
+                            embedding = self.recognize_face(aligned_image)
+                            stripped_name = "_".join(name.split("_")[:-1])
+                            future = asyncio.run_coroutine_threadsafe(
+                                self.databaseManager.add_embedding(stripped_name, embedding.tolist()),
+                                self.loop
+                            )
+                            future.result()
+                            print(f"inserted{stripped_name} with some embedding")
+                self.thread_running = False
+            except Exception as e:
+                print(e)
+                raise
+
+    def run_probes(self):
+        print("Running probes")
+        with open(PROBES_PATH,"r") as f:
+            probe_names = [line.strip() for line in f]
+        with open(VALID_NAMES_PATH,"r") as f:
+            valid_names = [line.strip() for line in f]
+        print("downloading dataset")
+        dataset = load_dataset("bitmind/lfw")
+        print("done")
+        data = dataset["train"]
+        while self.thread_running:
+            print("started running probes")
+            try:
+                for probe_name in probe_names:
+                    match = data.filter(lambda x: x["filename"] == probe_name)
+                    img = match[0]["image"]
+                    cv_img = np.array(img)
+                    cv_img = cv2.cvtColor(cv_img,cv2.COLOR_RGB2BGR)
+                    h,w,_ = cv_img.shape
+                    self.detector.setInputSize((w,h))
+                    _, faces = self.detector.detect(cv_img)
+                    if faces is not None:
+                            face = faces[0]
+                            landmarks = face[4:14].reshape(5,2).astype(np.float32)
+                            transformation_matrix = SimilarityTransform.from_estimate(landmarks,self.reference_points)
+                            aligned_image = cv2.warpAffine(cv_img,transformation_matrix.params[0:2, :],(112,112))
+                            embedding = self.recognize_face(aligned_image)
+                            result = self.compare_faces(np.asarray(embedding,dtype=np.float32).flatten())
+                            stripped_probe_name = "_".join(probe_name.split("_")[:-1])
+                            if(stripped_probe_name in valid_names):
+                                is_enrolled = True
+                            else:
+                                is_enrolled = False
+                            print(f"Predicted:   Max sim score: {result[0]} and predicted identity: {result[1][2]}. True identity of probe: {stripped_probe_name}. Probe is enrolled: {is_enrolled}")
+            except Exception as e:
+                print(e)
+            self.thread_running = False            
     '''
         Comments on insert_face()
         Used during dev to insert faces into the system, not part of original architecture
