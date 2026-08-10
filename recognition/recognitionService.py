@@ -41,12 +41,8 @@ class RecognitionService:
         self.identities = []
         self.loop = asyncio.get_running_loop()
         await self.load_identites()
-        if(self.detection_mode):
-            self.thread = asyncio.create_task(asyncio.to_thread(self.detect_face))
-            self.thread_running = True
-        else:
-            self.thread = asyncio.create_task(asyncio.to_thread(self.insert_face))
-            self.thread_running = True
+        self.thread = asyncio.create_task(asyncio.to_thread(self.detect_face))
+        self.thread_running = True
         return self
     
     async def load_identites(self):
@@ -146,51 +142,3 @@ class RecognitionService:
         finally:
             if(self.cap.isOpened()):
                 self.cap.release()
-    '''
-        Comments on insert_face()
-        Used during dev to insert faces into the system, not part of original architecture
-    '''
-    '''def insert_face(self):
-        while self.thread_running:
-            try:
-                self.cap = cv2.VideoCapture(0,cv2.CAP_V4L2)
-                if not self.cap.isOpened():
-                    print("No cam found!")
-                    return
-                print("watching")
-                input("Type anything to capture")
-                if not (self.cap.isOpened()): 
-                    break
-                ret, frame = recognitionService.cap.read()
-                h,w, _ = frame.shape
-                if not ret:
-                    break
-                self.detector.setInputSize((w,h))
-                _, faces = recognitionService.detector.detect(frame)
-                print(faces)
-                if faces is not None:
-                    for face in faces:
-                        landmarks = face[4:14].reshape(5,2).astype(np.float32)
-                        transformation_matrix = cv2.estimateAffinePartial2D(landmarks,recognitionService.reference_points)
-                        aligned_image = cv2.warpAffine(frame,transformation_matrix[0],(112,112))
-                        embedding = recognitionService.recognize_face(aligned_image)
-                        p_list = embedding.tolist()
-                        identity_id = input("identity_id: ")
-                        #wait for async function on event loop
-                        future = asyncio.run_coroutine_threadsafe(databaseManager.add(Embedding(identity_id=identity_id,vector=p_list)),self.loop)
-                        embedding_obj = future.result()
-                        print(f"added: {embedding_obj}")
-                        input("type to continue")
-            except Exception as e:
-                traceback.print_exc()
-                print(e)
-            finally:
-                self.cap.release()
-
-    #def insert_identities(self):
-    #    LFW = "./lfw"
-    #    TRACKER_FILE = "tracker.json"
-    #   MIN_IMAGES = 2
-    #    while self.thread_running:
-    #        try:
-                #fetch faces'''
