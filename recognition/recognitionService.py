@@ -20,8 +20,8 @@ GALLERY_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "utils",
 PROBES_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),"utils","random_probes.txt")
 VALID_NAMES_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),"utils","valid_names.txt")
 class RecognitionService:
-    def __init__(self, detection_mode: bool,access_grantor: AccessGrantor,database_manager: DatabaseManager, eventConnectionService: EventConnectionService):
-        self.detection_mode = detection_mode
+    def __init__(self, mode: bool,access_grantor: AccessGrantor,database_manager: DatabaseManager, eventConnectionService: EventConnectionService):
+        self.mode = mode
         self.camera_dimensions = (640,480)
         self.model_path = os.path.join(MODELS_DIR, "edgeface_xs_gamme_06.onnx")
         self.detector = None
@@ -45,10 +45,15 @@ class RecognitionService:
         self.loop = asyncio.get_running_loop()
         await self.load_identites()
         self.thread_running = True
-        if(self.detection_mode):
-            self.thread = asyncio.create_task(asyncio.to_thread(self.detect_face))
-        else:
-            self.thread = asyncio.create_task(asyncio.to_thread(self.run_probes))
+        match self.mode:
+            case "DETECTION_MODE":
+                self.thread = asyncio.create_task(asyncio.to_thread(self.detect_face))
+            case "GALLERY_INSERTION_MODE":
+                self.thread = asyncio.create_task(asyncio.to_thread(self.insert_gallery))
+            case "RUN_PROBES_MODE":
+                self.thread = asyncio.create_task(asyncio.to_thread(self.run_probes))
+            case _:
+                self.thread = asyncio.create_task(asyncio.to_thread(self.detect_face))
         return self
     
     async def load_identites(self):
@@ -167,6 +172,9 @@ class RecognitionService:
                     self.detector.setInputSize((w,h))
                     _, faces = self.detector.detect(cv_img)
                     if faces is not None:
+                        if len(faces)>1:
+                            print("more than 1 face - skipping")
+                            continue
                         for face in faces:
                             landmarks = face[4:14].reshape(5,2).astype(np.float32)
                             transformation_matrix = SimilarityTransform.from_estimate(landmarks,self.reference_points)
@@ -206,7 +214,10 @@ class RecognitionService:
                     self.detector.setInputSize((w,h))
                     _, faces = self.detector.detect(cv_img)
                     if faces is not None:
-                            face = faces[0]
+                        if len(faces)>1:
+                            print("len of faces more than 1 - skipping")
+                            continue
+                        for face in faces:
                             landmarks = face[4:14].reshape(5,2).astype(np.float32)
                             transformation_matrix = SimilarityTransform.from_estimate(landmarks,self.reference_points)
                             aligned_image = cv2.warpAffine(cv_img,transformation_matrix.params[0:2, :],(112,112))
