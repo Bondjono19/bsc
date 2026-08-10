@@ -31,7 +31,7 @@ with open("valid_names.txt","w") as f:
         f.write(name+"\n")
 
 
-'''with open("probes.txt","w") as f:
+with open("probes.txt","w") as f:
     for name in sorted(valid_names):
         f.write(name+"_0001.jpg\n")
     count = 0
@@ -39,11 +39,11 @@ with open("valid_names.txt","w") as f:
         f.write(name+"_0001.jpg\n")
         count+=1
         if(count >= 1000):
-            break'''
+            break
 
-'''with open("gallery.txt","w") as f:
+with open("gallery.txt","w") as f:
     for i in sorted(plus_four_imgs, key=lambda x: x["filename"]):
         num = re.search(r'_(\d+)\.jpg$', i["filename"]).group(1)
         n = int(num)
         if not(n > 5 or n == 1):
-            f.write(i["filename"]+"\n")'''
+            f.write(i["filename"]+"\n")

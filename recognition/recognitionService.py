@@ -14,11 +14,13 @@ from recognition.eventConnectionService import EventConnectionService
 from recognition.accessGrantor import AccessGrantor
 from skimage.transform import SimilarityTransform
 from datasets import load_dataset
+import re
+from collections import Counter
 
 MODELS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
-GALLERY_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "utils", "gallery.txt")
-PROBES_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),"utils","random_probes.txt")
-VALID_NAMES_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),"utils","valid_names.txt")
+GALLERY_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "utils", "data/gallery.txt")
+PROBES_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),"utils","data/probes.txt")
+VALID_NAMES_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),"utils","data/unique_gallery_names.txt")
 class RecognitionService:
     def __init__(self, mode: bool,access_grantor: AccessGrantor,database_manager: DatabaseManager, eventConnectionService: EventConnectionService):
         self.mode = mode
@@ -155,18 +157,17 @@ class RecognitionService:
     def insert_gallery(self):
         print("running gal")
         with open(GALLERY_PATH,"r") as f:
-            names = [line.strip() for line in f]
+            filenames = [line.strip() for line in f]
         print("downloading dataset")
         dataset = load_dataset("bitmind/lfw")
         print("done")
         data = dataset["train"]
-        while self.thread_running:
-            print("started insertion")
-            try:
-                for name in names:
-                    match = data.filter(lambda x: x["filename"] == name)
-                    img = match[0]["image"]
-                    cv_img = np.array(img)
+        images = {x["filename"]: x["image"] for x in data}
+        print("started insertion")
+        try:
+                for filename in filenames:
+                    image = images[filename]
+                    cv_img = np.array(image)
                     cv_img = cv2.cvtColor(cv_img,cv2.COLOR_RGB2BGR)
                     h,w,_ = cv_img.shape
                     self.detector.setInputSize((w,h))
@@ -180,35 +181,34 @@ class RecognitionService:
                             transformation_matrix = SimilarityTransform.from_estimate(landmarks,self.reference_points)
                             aligned_image = cv2.warpAffine(cv_img,transformation_matrix.params[0:2, :],(112,112))
                             embedding = self.recognize_face(aligned_image)
-                            stripped_name = "_".join(name.split("_")[:-1])
+                            stripped_name = "_".join(filename.split("_")[:-1])
                             future = asyncio.run_coroutine_threadsafe(
                                 self.databaseManager.add_embedding(stripped_name, embedding.tolist()),
                                 self.loop
                             )
                             future.result()
                             print(f"inserted{stripped_name} with some embedding")
-                self.thread_running = False
-            except Exception as e:
-                print(e)
-                raise
+        except Exception as e:
+            print(e)
+            raise
 
     def run_probes(self):
         print("Running probes")
         with open(PROBES_PATH,"r") as f:
-            probe_names = [line.strip() for line in f]
+            filenames = [line.strip() for line in f]
         with open(VALID_NAMES_PATH,"r") as f:
             valid_names = [line.strip() for line in f]
         print("downloading dataset")
         dataset = load_dataset("bitmind/lfw")
         print("done")
         data = dataset["train"]
+        images = {x["filename"]: x["image"] for x in data}
         while self.thread_running:
             print("started running probes")
             try:
-                for probe_name in probe_names:
-                    match = data.filter(lambda x: x["filename"] == probe_name)
-                    img = match[0]["image"]
-                    cv_img = np.array(img)
+                for filename in filenames:
+                    image = images[filename]
+                    cv_img = np.array(image)
                     cv_img = cv2.cvtColor(cv_img,cv2.COLOR_RGB2BGR)
                     h,w,_ = cv_img.shape
                     self.detector.setInputSize((w,h))
@@ -223,7 +223,7 @@ class RecognitionService:
                             aligned_image = cv2.warpAffine(cv_img,transformation_matrix.params[0:2, :],(112,112))
                             embedding = self.recognize_face(aligned_image)
                             result = self.compare_faces(np.asarray(embedding,dtype=np.float32).flatten())
-                            stripped_probe_name = "_".join(probe_name.split("_")[:-1])
+                            stripped_probe_name = "_".join(filename.split("_")[:-1])
                             if(stripped_probe_name in valid_names):
                                 is_enrolled = True
                             else:
@@ -231,52 +231,4 @@ class RecognitionService:
                             print(f"Predicted:   Max sim score: {result[0]} and predicted identity: {result[1][2]}. True identity of probe: {stripped_probe_name}. Probe is enrolled: {is_enrolled}")
             except Exception as e:
                 print(e)
-            self.thread_running = False            
-    '''
-        Comments on insert_face()
-        Used during dev to insert faces into the system, not part of original architecture
-    '''
-    '''def insert_face(self):
-        while self.thread_running:
-            try:
-                self.cap = cv2.VideoCapture(0,cv2.CAP_V4L2)
-                if not self.cap.isOpened():
-                    print("No cam found!")
-                    return
-                print("watching")
-                input("Type anything to capture")
-                if not (self.cap.isOpened()): 
-                    break
-                ret, frame = recognitionService.cap.read()
-                h,w, _ = frame.shape
-                if not ret:
-                    break
-                self.detector.setInputSize((w,h))
-                _, faces = recognitionService.detector.detect(frame)
-                print(faces)
-                if faces is not None:
-                    for face in faces:
-                        landmarks = face[4:14].reshape(5,2).astype(np.float32)
-                        transformation_matrix = cv2.estimateAffinePartial2D(landmarks,recognitionService.reference_points)
-                        aligned_image = cv2.warpAffine(frame,transformation_matrix[0],(112,112))
-                        embedding = recognitionService.recognize_face(aligned_image)
-                        p_list = embedding.tolist()
-                        identity_id = input("identity_id: ")
-                        #wait for async function on event loop
-                        future = asyncio.run_coroutine_threadsafe(databaseManager.add(Embedding(identity_id=identity_id,vector=p_list)),self.loop)
-                        embedding_obj = future.result()
-                        print(f"added: {embedding_obj}")
-                        input("type to continue")
-            except Exception as e:
-                traceback.print_exc()
-                print(e)
-            finally:
-                self.cap.release()
-
-    #def insert_identities(self):
-    #    LFW = "./lfw"
-    #    TRACKER_FILE = "tracker.json"
-    #   MIN_IMAGES = 2
-    #    while self.thread_running:
-    #        try:
-                #fetch faces'''
+            self.thread_running = False   
