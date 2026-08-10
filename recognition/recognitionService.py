@@ -114,6 +114,9 @@ class RecognitionService:
                     _, faces = self.detector.detect(frame)
                     print(faces)
                     if faces is not None:
+                        if len(faces > 1):
+                            print("More than one face detected - skipping")
+                            continue
                         for face in faces:
                             landmarks = face[4:14].reshape(5,2).astype(np.float32)
                             transformation_matrix = SimilarityTransform.from_estimate(landmarks,self.reference_points)#cv2.estimateAffinePartial2D(landmarks,self.reference_points)
