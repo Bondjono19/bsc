@@ -25,7 +25,7 @@ class Event(BaseModel):
 class Identity(BaseModel):
     __tablename__ = "identities"
     id: Mapped[int] = mapped_column(primary_key=True)
-    global_id: Mapped[int] = mapped_column(unique=True)
+    global_id: Mapped[int] = mapped_column(unique=True,nullable=True)
     name: Mapped[str] = mapped_column(String,unique=True)
     embeddings: Mapped[list["Embedding"]] = relationship(back_populates="identity", cascade="all, delete-orphan")
 
