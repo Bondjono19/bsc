@@ -14,13 +14,12 @@ from recognition.eventConnectionService import EventConnectionService
 from recognition.accessGrantor import AccessGrantor
 from skimage.transform import SimilarityTransform
 from datasets import load_dataset
-import re
-from collections import Counter
 
 MODELS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
 GALLERY_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "utils", "data/gallery.txt")
 PROBES_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),"utils","data/probes.txt")
 VALID_NAMES_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),"utils","data/unique_gallery_names.txt")
+RESULTS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),"utils","data/results.csv")
 class RecognitionService:
     def __init__(self, mode: bool,access_grantor: AccessGrantor,database_manager: DatabaseManager, eventConnectionService: EventConnectionService):
         self.mode = mode
@@ -206,29 +205,32 @@ class RecognitionService:
         while self.thread_running:
             print("started running probes")
             try:
-                for filename in filenames:
-                    image = images[filename]
-                    cv_img = np.array(image)
-                    cv_img = cv2.cvtColor(cv_img,cv2.COLOR_RGB2BGR)
-                    h,w,_ = cv_img.shape
-                    self.detector.setInputSize((w,h))
-                    _, faces = self.detector.detect(cv_img)
-                    if faces is not None:
-                        if len(faces)>1:
-                            print("len of faces more than 1 - skipping")
-                            continue
-                        for face in faces:
-                            landmarks = face[4:14].reshape(5,2).astype(np.float32)
-                            transformation_matrix = SimilarityTransform.from_estimate(landmarks,self.reference_points)
-                            aligned_image = cv2.warpAffine(cv_img,transformation_matrix.params[0:2, :],(112,112))
-                            embedding = self.recognize_face(aligned_image)
-                            result = self.compare_faces(np.asarray(embedding,dtype=np.float32).flatten())
-                            stripped_probe_name = "_".join(filename.split("_")[:-1])
-                            if(stripped_probe_name in valid_names):
-                                is_enrolled = True
-                            else:
-                                is_enrolled = False
-                            print(f"Predicted:   Max sim score: {result[0]} and predicted identity: {result[1][2]}. True identity of probe: {stripped_probe_name}. Probe is enrolled: {is_enrolled}")
+                with open(RESULTS_PATH,"w") as f:
+                    f.write("score,pred_identity,true_identity_of_probe,is_enrolled\n")
+                    for filename in filenames:
+                        image = images[filename]
+                        cv_img = np.array(image)
+                        cv_img = cv2.cvtColor(cv_img,cv2.COLOR_RGB2BGR)
+                        h,w,_ = cv_img.shape
+                        self.detector.setInputSize((w,h))
+                        _, faces = self.detector.detect(cv_img)
+                        if faces is not None:
+                            if len(faces)>1:
+                                print("len of faces more than 1 - skipping")
+                                continue
+                            for face in faces:
+                                landmarks = face[4:14].reshape(5,2).astype(np.float32)
+                                transformation_matrix = SimilarityTransform.from_estimate(landmarks,self.reference_points)
+                                aligned_image = cv2.warpAffine(cv_img,transformation_matrix.params[0:2, :],(112,112))
+                                embedding = self.recognize_face(aligned_image)
+                                result = self.compare_faces(np.asarray(embedding,dtype=np.float32).flatten())
+                                stripped_probe_name = "_".join(filename.split("_")[:-1])
+                                if(stripped_probe_name in valid_names):
+                                    is_enrolled = True
+                                else:
+                                    is_enrolled = False
+                                print(f"Predicted:   Max sim score: {result[0]} and predicted identity: {result[1][2]}. True identity of probe: {stripped_probe_name}. Probe is enrolled: {is_enrolled}")
+                                f.write(f"{result[0]},{result[1][2]},{stripped_probe_name},{is_enrolled}"+"\n")
             except Exception as e:
                 print(e)
             self.thread_running = False   
