@@ -1,6 +1,6 @@
 import cv2
 import numpy as np
-import time
+import time,csv
 import os
 import json
 from cv2.typing import MatLike
@@ -16,6 +16,7 @@ from skimage.transform import SimilarityTransform
 from datasets import load_dataset
 
 MODELS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
+TEST_DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "utils/data")
 GALLERY_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "utils", "data/gallery.txt")
 PROBES_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),"utils","data/probes.txt")
 VALID_NAMES_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),"utils","data/unique_gallery_names.txt")
@@ -37,9 +38,13 @@ class RecognitionService:
         self.accessGrantor = access_grantor
         self.databaseManager = database_manager
         self.eventConnectionService = eventConnectionService
+        self.t2_results = open(os.path.join(TEST_DATA_PATH,"t2_results.csv"), "w", newline="")
+        self.log = csv.writer((self.t2_results))
+        self.log.writerow(["timestamp","detect_ms","align_ms","embed_ms","compare_ms","total_ms"])
 
     async def __aenter__(self):
         self.detector = cv2.FaceDetectorYN.create(os.path.join(MODELS_DIR, "face_detection_yunet_2023mar.onnx"),"",self.camera_dimensions)
+        self.detector.setInputSize((640,480))
         self.recognizer = oxrt.InferenceSession(os.path.join(MODELS_DIR, "edgeface_xs_gamme_06.onnx"),providers=["CPUExecutionProvider"])
         self.reference_points = np.asarray(get_reference_points(),dtype=np.float32).reshape(5,2)
         self.identities = []
@@ -112,23 +117,31 @@ class RecognitionService:
                         break
                     print("watching")
                     ret, frame = self.cap.read()
-                    h,w, _ = frame.shape
+                    #h,w, _ = frame.shape
                     if not (self.cap.isOpened()):
                         print("broke loop, cap not open")
                         break
                     if not ret:
                         print("no ret")
                         break
-                    self.detector.setInputSize((w,h))
+                    t_0 = time.perf_counter()
+                    #self.detector.setInputSize((w,h))
                     _, faces = self.detector.detect(frame)
+                    t_1 = time.perf_counter()
                     print(faces)
                     if faces is not None:
+                        if len(faces) > 1:
+                            print("More than one face detected - skipping")
+                            continue
                         for face in faces:
                             landmarks = face[4:14].reshape(5,2).astype(np.float32)
                             transformation_matrix = SimilarityTransform.from_estimate(landmarks,self.reference_points)#cv2.estimateAffinePartial2D(landmarks,self.reference_points)
                             aligned_image = cv2.warpAffine(frame,transformation_matrix.params[0:2, :],(112,112))
+                            t_2 = time.perf_counter()
                             embedding = self.recognize_face(aligned_image)
+                            t_3 = time.perf_counter()
                             result = self.compare_faces(np.asarray(embedding,dtype=np.float32).flatten())
+                            t_4 = time.perf_counter()
                             response: str
                             access = result[0]>self.threshold
                             if(access):
@@ -137,15 +150,25 @@ class RecognitionService:
                             else:
                                 response = f"Face detected, no match in DB, max sim score: {result[0]}"
                                 print(response)
+                            #"timestamp","detect_ms","align_ms","embed_ms","compare_ms","total_ms"
+                            self.log.writerow([
+                                time.time(),
+                                (t_1-t_0) * 1000,
+                                (t_2-t_1) * 1000,
+                                (t_3-t_2) * 1000,
+                                (t_4-t_3) * 1000,
+                                (t_4-t_0) * 1000,
+                            ])
                             #fire and forget event
                             asyncio.run_coroutine_threadsafe(self.eventConnectionService.publish(Event(direction="outbound",content=response, channel=self.eventConnectionService.channel,status="pending")),self.loop)
             
                             if(access):
                                 #call child class that implements grantAccess interface and pass optional data. Here name for instance.
                                 self.accessGrantor.grantAccess(result[1][2])
+                            
                 except Exception as e:
                     print(e)
-                    raise
+                    continue
         except Exception as e:
             print(e)
             self.thread_running = False
