@@ -13,8 +13,7 @@ services:
     depends_on:
       - db
   recognition:
-    build:
-      context: ./../
+    image: ghcr.io/bondjono19/bsc:latest
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=${REDIS_PORT}
