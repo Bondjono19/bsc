@@ -3,7 +3,7 @@ from sqlalchemy.orm import DeclarativeBase, sessionmaker, selectinload
 from typing import Type,AsyncGenerator
 from sqlalchemy import select, text
 from sqlalchemy.engine import CursorResult
-from shared.database.models import BaseModel,Identity,AuthToken,Event
+from shared.database.models import BaseModel,Identity,AuthToken,Event,Embedding
 import os
 
 class DatabaseManager:
@@ -73,3 +73,17 @@ class DatabaseManager:
         tkn = AuthToken(token="token",description="test")
         await self.add(tkn)
         print("added idenntity")
+
+    async def add_embedding(self, name: str, vector: list[float], global_id: int = None) -> Embedding:
+        async with self.AsyncSessionLocal() as db:
+            res = await db.execute(select(Identity).where(Identity.name == name))
+            identity = res.scalar_one_or_none()
+            if not identity:
+                identity = Identity(name=name, global_id=global_id)
+                db.add(identity)
+                await db.flush()
+            embedding = Embedding(identity_id=identity.id, vector=vector)
+            db.add(embedding)
+            await db.commit()
+            await db.refresh(embedding)
+            return embedding

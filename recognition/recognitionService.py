@@ -1,12 +1,9 @@
 import cv2
 import numpy as np
-import time
 import os
-import json
 from cv2.typing import MatLike
 import onnxruntime as oxrt
 import asyncio
-import traceback
 from recognition.utils.get_points import get_reference_points
 from shared.database.databaseManager import DatabaseManager
 from shared.database.models import Identity,Embedding, Event
@@ -17,8 +14,8 @@ MODELS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
 
 
 class RecognitionService:
-    def __init__(self, detection_mode: bool,access_grantor: AccessGrantor,database_manager: DatabaseManager, eventConnectionService: EventConnectionService):
-        self.detection_mode = detection_mode
+    def __init__(self, mode: bool,access_grantor: AccessGrantor,database_manager: DatabaseManager, eventConnectionService: EventConnectionService):
+        self.mode = mode
         self.camera_dimensions = (640,480)
         self.model_path = os.path.join(MODELS_DIR, "edgeface_xs_gamme_06.onnx")
         self.detector = None
@@ -36,13 +33,18 @@ class RecognitionService:
 
     async def __aenter__(self):
         self.detector = cv2.FaceDetectorYN.create(os.path.join(MODELS_DIR, "face_detection_yunet_2023mar.onnx"),"",self.camera_dimensions)
+        self.detector.setInputSize((640,480))
         self.recognizer = oxrt.InferenceSession(os.path.join(MODELS_DIR, "edgeface_xs_gamme_06.onnx"),providers=["CPUExecutionProvider"])
         self.reference_points = np.asarray(get_reference_points(),dtype=np.float32).reshape(5,2)
         self.identities = []
         self.loop = asyncio.get_running_loop()
         await self.load_identites()
-        self.thread = asyncio.create_task(asyncio.to_thread(self.detect_face))
         self.thread_running = True
+        match self.mode:
+            case "DETECTION_MODE":
+                self.thread = asyncio.create_task(asyncio.to_thread(self.detect_face))
+            case _:
+                self.thread = asyncio.create_task(asyncio.to_thread(self.detect_face))
         return self
     
     async def load_identites(self):
@@ -53,6 +55,7 @@ class RecognitionService:
                 for embedding in embeddings:
                     vector = np.asarray(embedding.vector,dtype=np.float32)
                     self.identities.append((identity.id,identity.global_id,identity.name,vector))
+        print(f"Loaded {len(self.identities)} identity embeddings")
 
     async def __aexit__(self, exc_type, exc, tb):
         self.thread_running = False
@@ -99,14 +102,14 @@ class RecognitionService:
                         break
                     print("watching")
                     ret, frame = self.cap.read()
-                    h,w, _ = frame.shape
+                    #h,w, _ = frame.shape
                     if not (self.cap.isOpened()):
                         print("broke loop, cap not open")
                         break
                     if not ret:
                         print("no ret")
                         break
-                    self.detector.setInputSize((w,h))
+                    #self.detector.setInputSize((w,h))
                     _, faces = self.detector.detect(frame)
                     print(faces)
                     if faces is not None:
