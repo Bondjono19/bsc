@@ -40,6 +40,7 @@ class RecognitionService:
 
     async def __aenter__(self):
         self.detector = cv2.FaceDetectorYN.create(os.path.join(MODELS_DIR, "face_detection_yunet_2023mar.onnx"),"",self.camera_dimensions)
+        self.detector.setInputSize((640,480))
         self.recognizer = oxrt.InferenceSession(os.path.join(MODELS_DIR, "edgeface_xs_gamme_06.onnx"),providers=["CPUExecutionProvider"])
         self.reference_points = np.asarray(get_reference_points(),dtype=np.float32).reshape(5,2)
         self.identities = []
@@ -103,7 +104,7 @@ class RecognitionService:
                         break
                     print("watching")
                     ret, frame = self.cap.read()
-                    h,w, _ = frame.shape
+                    #h,w, _ = frame.shape
                     if not (self.cap.isOpened()):
                         print("broke loop, cap not open")
                         break
@@ -111,10 +112,7 @@ class RecognitionService:
                         print("no ret")
                         break
                     t_0 = time.perf_counter()
-                    self.detector.setInputSize((w,h))
-                    print("wh:")
-                    print(w)
-                    print(h)
+                    #self.detector.setInputSize((w,h))
                     _, faces = self.detector.detect(frame)
                     t_1 = time.perf_counter()
                     print(faces)
