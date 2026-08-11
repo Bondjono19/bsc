@@ -26,6 +26,7 @@ services:
       - POSTGRES_HOST=${POSTGRES_HOST}
       - POSTGRES_USER=${POSTGRES_USER}
       - POSTGRES_DB=${POSTGRES_DB}
+      - ACCESS_GRANTOR=${ACCESS_GRANTOR}
     command: ["uvicorn", "recognition.main:app", "--host", "0.0.0.0", "--port", "8000",]
     depends_on:
       - db
