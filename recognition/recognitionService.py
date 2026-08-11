@@ -110,7 +110,7 @@ class RecognitionService:
                     _, faces = self.detector.detect(frame)
                     print(faces)
                     if faces is not None:
-                        if len(faces > 1):
+                        if len(faces) > 1:
                             print("More than one face detected - skipping")
                             continue
                         for face in faces:
