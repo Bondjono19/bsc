@@ -14,6 +14,7 @@ from recognition.eventConnectionService import EventConnectionService
 from recognition.accessGrantor import AccessGrantor
 from skimage.transform import SimilarityTransform
 MODELS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
+TEST_DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "utils/testing")
 
 
 class RecognitionService:
