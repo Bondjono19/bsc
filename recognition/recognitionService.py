@@ -112,7 +112,9 @@ class RecognitionService:
                         break
                     t_0 = time.perf_counter()
                     self.detector.setInputSize((w,h))
-                    print("wh:" + w + h)
+                    print("wh:")
+                    print(w)
+                    print(h)
                     _, faces = self.detector.detect(frame)
                     t_1 = time.perf_counter()
                     print(faces)
