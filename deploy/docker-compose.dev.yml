@@ -36,6 +36,8 @@ services:
       - video
     stdin_open: true
     tty: true
+    volumes:
+      - ./../recognition/utils/data:/app/recognition/utils/data
   db:
     image: pgvector/pgvector:pg17
     restart: always
