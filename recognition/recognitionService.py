@@ -14,7 +14,7 @@ from recognition.eventConnectionService import EventConnectionService
 from recognition.accessGrantor import AccessGrantor
 from skimage.transform import SimilarityTransform
 MODELS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
-TEST_DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "utils/testing")
+TEST_DATA_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "utils/data")
 
 
 class RecognitionService:
@@ -34,7 +34,7 @@ class RecognitionService:
         self.accessGrantor = access_grantor
         self.databaseManager = database_manager
         self.eventConnectionService = eventConnectionService
-        self.t2_results = open("t2_results.csv", "w", newline="")
+        self.t2_results = open(os.path.join(TEST_DATA_PATH,"t2_results.csv"), "w", newline="")
         self.log = csv.writer((self.t2_results))
         self.log.writerow(["timestamp","detect_ms","align_ms","embed_ms","compare_ms","total_ms"])
 
