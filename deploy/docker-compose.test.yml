@@ -1,6 +1,6 @@
 services:
   api:
-    image: ghcr.io/bondjono19/bsc:latest
+    image: ghcr.io/bondjono19/bsc:testing
     environment:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_PORT=${POSTGRES_PORT}
@@ -14,7 +14,7 @@ services:
       - db
   recognition:
     build:
-      context: ghcr.io/bondjono19/bsc:latest
+      context: ghcr.io/bondjono19/bsc:testing
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=${REDIS_PORT}
