@@ -35,6 +35,8 @@ services:
       - video
     stdin_open: true
     tty: true
+    volumes:
+      - /home/pi/bsc-deploy/testdata:/app/recognition/utils/testing
   db:
     image: pgvector/pgvector:pg17
     restart: always
