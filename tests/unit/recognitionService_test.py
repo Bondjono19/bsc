@@ -1,13 +1,10 @@
 import pytest
 from unittest.mock import AsyncMock, MagicMock
-
 from recognition.recognitionService import RecognitionService
 from recognition.accessGrantor import AccessGrantor
 from recognition.eventConnectionService import EventConnectionService
 from shared.database.databaseManager import DatabaseManager
-from shared.database.models import Identity, Embedding
 import numpy as np
-
 
 def _fresh_service():
 
@@ -20,12 +17,10 @@ def _fresh_service():
     service.identities = []
     return service
 
-
 def test_compare_identical_vectors_is_one():
     service = _fresh_service()
     v = np.asarray([1.0, 2.0, 3.0], dtype=np.float32)
     assert service.compare(v, v) == pytest.approx(1.0, abs=1e-6)
-
 
 def test_compare_orthogonal_vectors_is_zero():
     service = _fresh_service()
@@ -33,20 +28,17 @@ def test_compare_orthogonal_vectors_is_zero():
     b = np.asarray([0.0, 1.0], dtype=np.float32)
     assert service.compare(a, b) == pytest.approx(0.0, abs=1e-6)
 
-
 def test_compare_opposite_vectors_is_negative_one():
     service = _fresh_service()
     a = np.asarray([1.0, 1.0], dtype=np.float32)
     b = np.asarray([-1.0, -1.0], dtype=np.float32)
     assert service.compare(a, b) == pytest.approx(-1.0, abs=1e-6)
 
-
 def test_compare_faces_with_no_identities_returns_no_match():
     service = _fresh_service()
     q = np.asarray([0.1, 0.2, 0.3], dtype=np.float32)
     best = service.compare_faces(q)
     assert best == [0, None]
-
 
 def test_compare_faces_picks_highest_similarity():
     service = _fresh_service()
@@ -59,13 +51,10 @@ def test_compare_faces_picks_highest_similarity():
     assert best[0] == pytest.approx(1.0, abs=1e-6)
     assert best[1][2] == "Match"
 
-
 def test_preprocess_tensor_shape_and_range():
     service = _fresh_service()
-    # Black and white BGR frames map to the -1..1 normalized range.
     black = np.zeros((112, 112, 3), dtype=np.uint8)
     white = np.full((112, 112, 3), 255, dtype=np.uint8)
-
     black_t = service.preprocess_tensor(black)
     white_t = service.preprocess_tensor(white)
 
@@ -73,7 +62,6 @@ def test_preprocess_tensor_shape_and_range():
     assert black_t.dtype == np.float32
     assert black_t.min() == pytest.approx(-1.0)
     assert white_t.max() == pytest.approx(1.0)
-
 
 def test_compare_faces():
     service = _fresh_service()

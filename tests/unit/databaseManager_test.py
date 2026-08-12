@@ -24,7 +24,6 @@ async def test_add_commits_refreshes_and_returns_object(manager):
     assert session.committed == 1
     assert session.refreshed == [obj]
 
-
 async def test_execute_returns_scalar_list(manager):
     result_mock = MagicMock()
     result_mock.scalars.return_value.all.return_value = ["a", "b"]
@@ -34,7 +33,6 @@ async def test_execute_returns_scalar_list(manager):
     rows = await manager.execute("SELECT 1")
 
     assert rows == ["a", "b"]
-
 
 async def test_remove_deletes_when_found(manager):
     target = Identity(global_id=1, name="Bob")
@@ -49,7 +47,6 @@ async def test_remove_deletes_when_found(manager):
     assert session.deleted == [target]
     assert session.committed == 1
 
-
 async def test_remove_returns_false_when_not_found(manager):
     result_mock = MagicMock()
     result_mock.scalar_one_or_none.return_value = None
@@ -62,7 +59,6 @@ async def test_remove_returns_false_when_not_found(manager):
     assert session.deleted == []
     assert session.committed == 0
 
-
 async def test_update_merges_and_commits(manager):
     session = FakeSession()
     manager.AsyncSessionLocal = session_factory(session)
@@ -72,7 +68,6 @@ async def test_update_merges_and_commits(manager):
 
     assert session.merged == [obj]
     assert session.committed == 1
-
 
 async def test_fetch_all_returns_scalar_list(manager):
     result_mock = MagicMock()

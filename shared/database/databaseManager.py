@@ -65,7 +65,7 @@ class DatabaseManager:
             res = await db.execute(query)
             return res.scalars().all()
 
-    async def insertBasic(self):
+    async def insertBasic(self) -> None:
         async with self.AsyncSessionLocal() as db:
             res = await db.execute(select(AuthToken).where(AuthToken.description == "test"))
             if not res.scalar_one_or_none() == None:
@@ -76,17 +76,12 @@ class DatabaseManager:
 
     async def add_embedding(self, name: str, vector: list[float], global_id: int = None) -> Embedding:
         async with self.AsyncSessionLocal() as db:
-        # Check if identity exists
             res = await db.execute(select(Identity).where(Identity.name == name))
             identity = res.scalar_one_or_none()
-
-         # Create if not found
             if not identity:
                 identity = Identity(name=name, global_id=global_id)
                 db.add(identity)
-                await db.flush()  # generates identity.id without committing
-
-            # Attach embedding
+                await db.flush()
             embedding = Embedding(identity_id=identity.id, vector=vector)
             db.add(embedding)
             await db.commit()

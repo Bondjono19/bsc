@@ -1,13 +1,11 @@
 from shared.database.databaseManager import DatabaseManager
-from sqlalchemy import insert
 from shared.database.models import Identity,Embedding
-from typing import Type
 import logging
-import json
 
 class IdentityService:
-    def __init__(self,databaseManager: DatabaseManager):
+    def __init__(self,databaseManager: DatabaseManager) -> None:
         self.databaseManager = databaseManager
+        
     async def addIdentity(self, global_id: str, name: str, embeddings: list[list[float]]) -> Identity:
         try:
             if not embeddings == None:

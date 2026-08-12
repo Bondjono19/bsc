@@ -22,8 +22,6 @@ class EventConnectionService:
     
     async def __aenter__(self) -> "EventConnectionService":
         await self.initialize()
-        print("version20.27 ECS")
-        self.listen_task = asyncio.create_task(self.listen(self.channel))
         self.publish_task = asyncio.create_task(self.try_flush())
         return self
 
@@ -42,8 +40,6 @@ class EventConnectionService:
             print("Failed connnecting to event broker on (re)initialize")
     
     async def close(self) -> None:
-        if self.listen_task:
-            self.listen_task.cancel()
         if self.publish_task:
             self.publish_task.cancel()
         if self.pubsub:
@@ -64,25 +60,6 @@ class EventConnectionService:
                 print(e)
         print("trying reinitialize")
         await self.initialize()
-    async def listen(self,channel: str) -> None:
-        while True:
-            try:
-                if not self.redis_instance:
-                    print("Error on connection to event broker, sleeping 10 and reconneting")
-                    await asyncio.sleep(10)
-                    await self.reconnect()
-                    continue
-                self.pubsub = self.redis_instance.pubsub()
-                await self.pubsub.subscribe(channel)
-                async for message in self.pubsub.listen():
-                    if message["type"] == "message":
-                        await self.handleMessage(message["data"])
-            #except (redis.exceptions.TimeoutError, asyncio.TimeoutError):
-            #    continue
-            except Exception as e:
-                    print(f"Error on connection to event broker, sleeping 10 and reconneting:{e}")
-                    await asyncio.sleep(10)
-                    await self.reconnect()
 
     async def try_flush(self) -> None:
         while True:
@@ -114,11 +91,3 @@ class EventConnectionService:
         finally:
             await self.databaseManager.update(event)
         return event
-
-
-    async def handleMessage(self,message: str) -> None:
-        data = json.loads(message)
-        #Handle message appropriately
-        #Store event in DB
-        return
-        

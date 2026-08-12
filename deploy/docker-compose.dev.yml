@@ -10,7 +10,7 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
     ports:
       - "${APP_PORT}:${APP_PORT}"
-    command: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--reload"]
+    command: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
     depends_on:
       - db
   recognition:
@@ -28,7 +28,6 @@ services:
       - POSTGRES_DB=${POSTGRES_DB}
       - ACCESS_GRANTOR=${ACCESS_GRANTOR}
       - MODE=${MODE}
-      - ACCESS_GRANTOR=${ACCESS_GRANTOR}
     command: ["uvicorn", "recognition.main:app", "--host", "0.0.0.0", "--port", "8000",]
     depends_on:
       - db
@@ -39,8 +38,6 @@ services:
       - video
     stdin_open: true
     tty: true
-    volumes:
-      - ./../recognition/utils/data:/app/recognition/utils/data
   db:
     image: pgvector/pgvector:pg17
     restart: always

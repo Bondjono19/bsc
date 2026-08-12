@@ -15,7 +15,6 @@ import pytest
 
 
 def make_async_cm(return_value):
-    """Build an object usable as `async with ... as x` yielding return_value."""
     cm = MagicMock()
     cm.__aenter__ = AsyncMock(return_value=return_value)
     cm.__aexit__ = AsyncMock(return_value=False)
@@ -23,12 +22,6 @@ def make_async_cm(return_value):
 
 
 class FakeSession:
-    """Stand-in for an AsyncSession used inside DatabaseManager methods.
-
-    Records what was added/deleted/merged and lets each test decide what
-    `execute()` returns, so the DB layer can be exercised without Postgres.
-    """
-
     def __init__(self, execute_result=None):
         self.added = []
         self.deleted = []
@@ -62,19 +55,14 @@ class FakeSession:
     async def execute(self, query):
         return self._execute_result
 
-
 def session_factory(session):
     return MagicMock(return_value=session)
-
 
 @pytest.fixture
 def fake_session():
     return FakeSession()
 
-
 @pytest.fixture
 def fake_db():
-
     from shared.database.databaseManager import DatabaseManager
-
     return AsyncMock(spec=DatabaseManager)

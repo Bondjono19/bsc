@@ -1,8 +1,6 @@
 from unittest.mock import AsyncMock
-
 from api.identityService import IdentityService
 from shared.database.models import Identity
-
 
 async def test_add_identity_with_embeddings(fake_db):
     captured = {}
@@ -27,7 +25,6 @@ async def test_add_identity_with_embeddings(fake_db):
     assert len(added.embeddings) == 2
     assert added.embeddings[0].vector == [0.0] * 512
 
-
 async def test_add_identity_without_embeddings(fake_db):
     captured = {}
 
@@ -45,7 +42,6 @@ async def test_add_identity_without_embeddings(fake_db):
     assert result is captured["obj"]
     assert result.embeddings == []
 
-
 async def test_add_identity_returns_none_on_db_error(fake_db):
     fake_db.add = AsyncMock(side_effect=RuntimeError("unique violation"))
     service = IdentityService(fake_db)
@@ -54,14 +50,12 @@ async def test_add_identity_returns_none_on_db_error(fake_db):
 
     assert result is None
 
-
 async def test_remove_identity_delegates_to_db(fake_db):
     fake_db.remove = AsyncMock(return_value=True)
     service = IdentityService(fake_db)
 
     assert await service.removeIdentity(7) is True
     fake_db.remove.assert_awaited_once_with(7, Identity)
-
 
 async def test_remove_identity_returns_false_when_missing(fake_db):
     fake_db.remove = AsyncMock(return_value=False)
