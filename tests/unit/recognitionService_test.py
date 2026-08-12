@@ -9,7 +9,7 @@ import numpy as np
 def _fresh_service():
 
     service = RecognitionService(
-        detection_mode=True,
+        mode="DETECTION_MODE",
         access_grantor=MagicMock(spec=AccessGrantor),
         database_manager=AsyncMock(spec=DatabaseManager),
         eventConnectionService=AsyncMock(spec=EventConnectionService),

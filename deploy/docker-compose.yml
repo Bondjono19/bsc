@@ -1,6 +1,7 @@
 services:
   api:
     image: ghcr.io/bondjono19/bsc:latest
+    restart: always
     environment:
       - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
       - POSTGRES_PORT=${POSTGRES_PORT}
@@ -14,6 +15,7 @@ services:
       - db
   recognition:
     image: ghcr.io/bondjono19/bsc:latest
+    restart: always
     environment:
       - REDIS_HOST=redis
       - REDIS_PORT=${REDIS_PORT}
