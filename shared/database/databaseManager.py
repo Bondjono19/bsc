@@ -65,7 +65,7 @@ class DatabaseManager:
             res = await db.execute(query)
             return res.scalars().all()
 
-    async def insertBasic(self):
+    async def insertBasic(self) -> None:
         async with self.AsyncSessionLocal() as db:
             res = await db.execute(select(AuthToken).where(AuthToken.description == "test"))
             if not res.scalar_one_or_none() == None:

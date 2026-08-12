@@ -27,7 +27,7 @@ class IdentityRouter:
         data = json.loads(await request.body())
         if not data:
             return Response("Empty request body", status_code=400)
-    
+        
         name = data.get("name")
         if not name:
             return Response("Missing name", status_code=400)

@@ -9,12 +9,6 @@ from api.main import app, authenticationService
 
 @pytest_asyncio.fixture
 async def client(monkeypatch):
-    """AsyncClient bound to the real ASGI app.
-
-    ASGITransport does not run the FastAPI lifespan, so the app's
-    databaseManager startup never touches Postgres. Auth is allowed by
-    default; individual tests can override verifyToken to test rejection.
-    """
     monkeypatch.setattr(
         authenticationService, "verifyToken", AsyncMock(return_value=True)
     )
@@ -24,5 +18,4 @@ async def client(monkeypatch):
     ) as ac:
         yield ac
 
-
-AUTH_HEADERS = {"Authorization": "Bearer test-token"}
+AUTH_HEADERS = {"Authorization": "Bearer test"}

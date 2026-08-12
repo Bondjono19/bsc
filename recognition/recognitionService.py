@@ -14,7 +14,7 @@ MODELS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
 
 
 class RecognitionService:
-    def __init__(self, mode: bool,access_grantor: AccessGrantor,database_manager: DatabaseManager, eventConnectionService: EventConnectionService):
+    def __init__(self, mode: bool,access_grantor: AccessGrantor,database_manager: DatabaseManager, eventConnectionService: EventConnectionService) -> None:
         self.mode = mode
         self.camera_dimensions = (640,480)
         self.model_path = os.path.join(MODELS_DIR, "edgeface_xs_gamme_06.onnx")
@@ -31,7 +31,7 @@ class RecognitionService:
         self.databaseManager = database_manager
         self.eventConnectionService = eventConnectionService
 
-    async def __aenter__(self):
+    async def __aenter__(self) -> "RecognitionService":
         self.detector = cv2.FaceDetectorYN.create(os.path.join(MODELS_DIR, "face_detection_yunet_2023mar.onnx"),"",self.camera_dimensions)
         self.detector.setInputSize((640,480))
         self.recognizer = oxrt.InferenceSession(os.path.join(MODELS_DIR, "edgeface_xs_gamme_06.onnx"),providers=["CPUExecutionProvider"])
@@ -47,7 +47,7 @@ class RecognitionService:
                 self.thread = asyncio.create_task(asyncio.to_thread(self.detect_face))
         return self
     
-    async def load_identites(self):
+    async def load_identites(self) -> None:
         identities = await self.databaseManager.fetchAll(Identity, Identity.embeddings)
         if identities is not None:
             for identity in identities:
@@ -57,13 +57,13 @@ class RecognitionService:
                     self.identities.append((identity.id,identity.global_id,identity.name,vector))
         print(f"Loaded {len(self.identities)} identity embeddings")
 
-    async def __aexit__(self, exc_type, exc, tb):
+    async def __aexit__(self, exc_type, exc, tb) -> None:
         self.thread_running = False
     
-    def compare(self,v1,v2):
+    def compare(self,v1,v2) -> float:
         return (np.dot(v1,v2)) / (np.linalg.norm(v1)*np.linalg.norm(v2))
 
-    def compare_faces(self, embedding: np.ndarray):
+    def compare_faces(self, embedding: np.ndarray)->float:
         best_similarity = [0,None]
         for identity in self.identities:
             sim = self.compare(embedding,identity[3])
@@ -74,7 +74,7 @@ class RecognitionService:
         return best_similarity
         #DB face iterations
         
-    def preprocess_tensor(self,frame):
+    def preprocess_tensor(self,frame) ->np.ndarray:
         tensor = cv2.cvtColor(frame,cv2.COLOR_BGR2RGB)
         #Convnert datatype
         tensor = tensor.astype(np.float32) / 255.0
@@ -87,12 +87,12 @@ class RecognitionService:
         tensor = np.expand_dims(tensor,axis=0)
         return np.ascontiguousarray(tensor)
 
-    def recognize_face(self,frame: MatLike):
+    def recognize_face(self,frame: MatLike) -> np.ndarray:
         tensor = self.preprocess_tensor(frame)
         embedding = self.recognizer.run(None, {"input.1": tensor})
         return np.asarray(embedding[0],dtype=np.float32).flatten()
 
-    def detect_face(self):
+    def detect_face(self) -> None:
         try:
             self.cap = cv2.VideoCapture(0,cv2.CAP_V4L2)
             while self.thread_running:

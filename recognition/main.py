@@ -11,10 +11,10 @@ import os
 async def run(app: FastAPI):
 
     databaseManager = DatabaseManager()
-    access_grantor = load_access_grantor_impl()
+    accessGrantor = load_access_grantor_impl()
     eventConnectionService = EventConnectionService("recognitionChannel",databaseManager)
     recognition_mode = os.environ["MODE"]
-    recognitionService = RecognitionService(mode=recognition_mode,access_grantor=access_grantor,database_manager=databaseManager,eventConnectionService=eventConnectionService)
+    recognitionService = RecognitionService(mode=recognition_mode,access_grantor=accessGrantor,database_manager=databaseManager,eventConnectionService=eventConnectionService)
 
     async with databaseManager as db, eventConnectionService as ecs,recognitionService as rs:
         app.state.db = db
