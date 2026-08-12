@@ -31,7 +31,6 @@ services:
     command: ["uvicorn", "recognition.main:app", "--host", "0.0.0.0", "--port", "8000",]
     depends_on:
       - db
-      - redis
     devices:
       - "/dev/video0:/dev/video0"
     group_add:
