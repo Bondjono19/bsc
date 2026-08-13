@@ -189,7 +189,7 @@ class RecognitionService:
                         if not self.cap.isOpened():
                             print("No cam found")
                             break
-                        print("watching")
+                        #print("watching")
                         ret, frame = self.cap.read()
                         #h,w, _ = frame.shape
                         if not (self.cap.isOpened()):
@@ -200,7 +200,7 @@ class RecognitionService:
                             break
                         #self.detector.setInputSize((w,h))
                         _, faces = self.detector.detect(frame)
-                        print(faces)
+                        #print(faces)
                         if faces is not None:
                             if len(faces) > 1:
                                 print("More than one face detected - skipping")
