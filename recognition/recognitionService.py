@@ -182,6 +182,7 @@ class RecognitionService:
 
     def detect_face_broker_test(self):
             try:
+                id_ite = 0
                 self.cap = cv2.VideoCapture(0,cv2.CAP_V4L2)
                 while self.thread_running:
                     try:
@@ -219,12 +220,13 @@ class RecognitionService:
                                     response = f"Face detected, no match in DB, max sim score: {result[0]}"
                                     print(response)
                                 #fire and forget event
+                                response+= f" ID: {id_ite}"
                                 asyncio.run_coroutine_threadsafe(self.eventConnectionService.publish(Event(direction="outbound",content=response, channel=self.eventConnectionService.channel,status="pending")),self.loop)
                                 self.log_broker_test.writerow([time.time(),response,self.eventConnectionService.channel])
                                 if(access):
                                     #call child class that implements grantAccess interface and pass optional data. Here name for instance.
                                     self.accessGrantor.grantAccess(result[1][2])
-                                
+                                id_ite+=1
                     except Exception as e:
                         print(e)
                         continue
