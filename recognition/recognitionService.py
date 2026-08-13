@@ -62,6 +62,8 @@ class RecognitionService:
                 self.thread = asyncio.create_task(asyncio.to_thread(self.insert_gallery))
             case "RUN_PROBES_MODE":
                 self.thread = asyncio.create_task(asyncio.to_thread(self.run_probes))
+            case "BROKER_TEST_MODE":
+                self.thread = asyncio.create_task(asyncio.to_thread(self.detect_face_broker_test))
             case _:
                 self.thread = asyncio.create_task(asyncio.to_thread(self.detect_face))
         return self
