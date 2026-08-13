@@ -1,0 +1,57 @@
+services:
+  api:
+    build:
+      context: ./../
+    environment:
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_DB=${POSTGRES_DB}
+    ports:
+      - "${APP_PORT}:${APP_PORT}"
+    command: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+    depends_on:
+      - db
+  recognition:
+    build:
+      context: ./../
+    environment:
+      - REDIS_HOST=${REDIS_HOST}
+      - REDIS_PORT=${REDIS_PORT}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - PYTHONUNBUFFERED=1
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_DB=${POSTGRES_DB}
+      - ACCESS_GRANTOR=${ACCESS_GRANTOR}
+      - MODE=${MODE}
+    command: ["uvicorn", "recognition.main:app", "--host", "0.0.0.0", "--port", "8000",] 
+    depends_on:
+      - db
+      - redis
+    devices:
+      - "/dev/video0:/dev/video0"
+    group_add:
+      - video
+    stdin_open: true
+    tty: true
+    volumes:
+     - ./../recognition/utils/data:app/recognition/utils/data
+  db:
+    image: pgvector/pgvector:pg17
+    restart: always
+    environment:
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_PORT=${POSTGRES_PORT}
+      - POSTGRES_HOST=${POSTGRES_HOST}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_DB=${POSTGRES_DB}
+    ports:
+      - '5432:5432'
+    volumes:
+      - db:/var/lib/postgresql/data
+volumes:
+  db:
