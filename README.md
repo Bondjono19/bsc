@@ -12,7 +12,7 @@ Setup assumes linux-based host operating system with docker installation present
 4. Copy the `.env.example` file onto the device and rename it .env and fill it out with your own secrets and configurations.
 5. Run 'crobtab -e' and insert a new line like: 
 ```
-     */5 * * * * (cd /home/pi/bsc-deploy && /usr/bin/docker compose -f docker-compose.prod.yml pull && /usr/bin/docker compose -f docker-compose.prod.yml up -d) >> /home/pi/deploy.log 2>&1
+     */5 * * * * (cd /dirpath/to/your/deploy && /usr/bin/docker compose -f docker-compose.yml pull && /usr/bin/docker compose -f docker-compose.yml up -d) >> /path/to/log/deploy.log 2>&1
 ```  
 5. (cont.) Ensure docker executable is in the same path. This command sets up a cron job which at 5 minute intervals ensures it has the latest version, and if not, pulls the latest.
 
