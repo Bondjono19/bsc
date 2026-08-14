@@ -9,6 +9,7 @@ class EventConnectionService:
     def __init__(self, channel: str,database_manager: DatabaseManager) -> None:
         self.channel = channel
         self.redis_instance = None
+        self.publish_task = None
         self.REDIS_HOST = os.getenv("REDIS_HOST")
         self.REDIS_PORT = os.getenv("REDIS_PORT")
         self.REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")

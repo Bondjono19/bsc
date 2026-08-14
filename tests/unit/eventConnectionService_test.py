@@ -1,3 +1,4 @@
+import asyncio
 from unittest.mock import AsyncMock, MagicMock
 import pytest
 from recognition.eventConnectionService import EventConnectionService
@@ -7,9 +8,7 @@ from shared.database.models import Event
 def test_init_channel(fake_db):
     service = EventConnectionService("channelName", fake_db)
     assert service.channel == "channelName"
-    assert service.redis_instance is None
-    assert service.pubsub is None
-    assert service.listen_task is None
+    assert service.redis_instance is not None
     assert service.databaseManager is fake_db
 
 async def test_publish_success_marks_published_and_persists(fake_db):
@@ -50,27 +49,59 @@ async def test_publish_failure_reverts_to_pending_and_raises(fake_db):
     fake_db.update.assert_awaited_once_with(event)
 
 
-async def test_initialize_swallows_connection_errors(monkeypatch, fake_db):
+async def test_try_flush_publishes_pending_events(monkeypatch, fake_db):
     service = EventConnectionService("recognitionChannel", fake_db)
+    service.redis_instance = AsyncMock()
 
-    async def boom(*args, **kwargs):
-        raise ConnectionError("cannot reach redis")
+    event = Event(
+        direction="outbound",
+        content="Detected: Messi",
+        channel="recognitionChannel",
+        status="pending",
+    )
+    fake_db.execute.return_value = [event]
+
+    async def stop_after_one_iteration(_seconds):
+        raise asyncio.CancelledError
 
     monkeypatch.setattr(
-        "recognition.eventConnectionService.redis.from_url", boom
+        "recognition.eventConnectionService.asyncio.sleep", stop_after_one_iteration
     )
 
-    await service.initialize()
-    assert service.redis_instance is None
+    with pytest.raises(asyncio.CancelledError):
+        await service.try_flush()
+
+    assert event.status == "published"
+    service.redis_instance.publish.assert_awaited_once_with(
+        "recognitionChannel", "Detected: Messi"
+    )
+    fake_db.update.assert_awaited_once_with(event)
+
+
+async def test_try_flush_swallows_connection_errors(monkeypatch, fake_db, capsys):
+    service = EventConnectionService("recognitionChannel", fake_db)
+    service.redis_instance = AsyncMock()
+    service.redis_instance.ping.side_effect = ConnectionError("cannot reach redis")
+
+    async def stop_after_one_iteration(_seconds):
+        raise asyncio.CancelledError
+
+    monkeypatch.setattr(
+        "recognition.eventConnectionService.asyncio.sleep", stop_after_one_iteration
+    )
+
+    with pytest.raises(asyncio.CancelledError):
+        await service.try_flush()
+
+    fake_db.execute.assert_not_awaited()
+    assert "Connection error: cannot reach redis" in capsys.readouterr().out
 
 
 async def test_close_cancels_tasks_and_closes_connections(fake_db):
     service = EventConnectionService("recognitionChannel", fake_db)
     service.publish_task = MagicMock()
-    service.pubsub = AsyncMock()
     service.redis_instance = AsyncMock()
 
     await service.close()
     service.publish_task.cancel.assert_called_once()
-    service.pubsub.close.assert_awaited_once()
     service.redis_instance.aclose.assert_awaited_once()

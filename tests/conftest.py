@@ -1,10 +1,15 @@
 import os
-#Set up mock DB conf
+#mock db
 os.environ.setdefault("DB_USER", "test")
 os.environ.setdefault("DB_PASSWORD", "test")
 os.environ.setdefault("DB_HOST", "localhost")
 os.environ.setdefault("DB_PORT", "5432")
 os.environ.setdefault("DB", "test")
+
+#mock event broker 
+os.environ.setdefault("REDIS_HOST", "localhost")
+os.environ.setdefault("REDIS_PORT", "6379")
+os.environ.setdefault("REDIS_PASSWORD", "test")
 
 from unittest.mock import MagicMock, AsyncMock
 import sqlalchemy.ext.asyncio
