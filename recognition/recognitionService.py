@@ -22,6 +22,7 @@ PROBES_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),"utils","d
 VALID_NAMES_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),"utils","data/unique_gallery_names.txt")
 RESULTS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),"utils","data/results.csv")
 BROKER_LOG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),"utils","data/sent_events_broker_test.csv")
+T_8_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),"utils","data/t_8_results.csv")
 class RecognitionService:
     def __init__(self, mode: bool,access_grantor: AccessGrantor,database_manager: DatabaseManager, eventConnectionService: EventConnectionService):
         self.mode = mode
@@ -40,11 +41,14 @@ class RecognitionService:
         self.databaseManager = database_manager
         self.eventConnectionService = eventConnectionService
         self.t2_results = open(os.path.join(TEST_DATA_PATH,"t2_results.csv"), "w", newline="")
+        self.t8_results = open(T_8_PATH,"w",newline="")
         self.log = csv.writer((self.t2_results))
         self.log.writerow(["timestamp","detect_ms","align_ms","embed_ms","compare_ms","total_ms"])
         self.results_broker_test = open(BROKER_LOG_PATH, "w", newline="")
         self.log_broker_test = csv.writer((self.results_broker_test))
         self.log_broker_test.writerow(["timestamp","content","channel"])
+        self.log_t8 = csv.writer((self.t8_results))
+        self.log_t8.writerow(["timestamp","iteration_ms"])
 
     async def __aenter__(self):
         self.detector = cv2.FaceDetectorYN.create(os.path.join(MODELS_DIR, "face_detection_yunet_2023mar.onnx"),"",self.camera_dimensions)
@@ -64,6 +68,8 @@ class RecognitionService:
                 self.thread = asyncio.create_task(asyncio.to_thread(self.run_probes))
             case "BROKER_TEST_MODE":
                 self.thread = asyncio.create_task(asyncio.to_thread(self.detect_face_broker_test))
+            case "T8_TEST_MODE":
+                self.thread = asyncio.create_task(asyncio.to_thread(self.detect_face_t8))
             case _:
                 self.thread = asyncio.create_task(asyncio.to_thread(self.detect_face))
         return self
@@ -230,6 +236,67 @@ class RecognitionService:
                                     #call child class that implements grantAccess interface and pass optional data. Here name for instance.
                                     self.accessGrantor.grantAccess(result[1][2])
                                 id_ite+=1
+                    except Exception as e:
+                        print(e)
+                        continue
+            except Exception as e:
+                print(e)
+                self.thread_running = False
+            finally:
+                if(self.cap.isOpened()):
+                    self.cap.release()
+
+    def detect_face_t8(self):
+            try:
+                self.cap = cv2.VideoCapture(0,cv2.CAP_V4L2)
+                while self.thread_running:
+                    try:
+                        t_0 = time.perf_counter()
+                        if not self.cap.isOpened():
+                            print("No cam found")
+                            break
+                        print("watching")
+                        ret, frame = self.cap.read()
+                        #h,w, _ = frame.shape
+                        if not (self.cap.isOpened()):
+                            print("broke loop, cap not open")
+                            break
+                        if not ret:
+                            print("no ret")
+                            break
+                        #self.detector.setInputSize((w,h))
+                        _, faces = self.detector.detect(frame)
+                        print(faces)
+                        t_1 = time.perf_counter()
+                        #"timestamp","iteration_ms"
+                        self.log_t8.writerow([
+                            time.time(),
+                            (t_1-t_0)*1000,
+                        ])
+                        if faces is not None:
+                            if len(faces) > 1:
+                                print("More than one face detected - skipping")
+                                continue
+                            for face in faces:
+                                landmarks = face[4:14].reshape(5,2).astype(np.float32)
+                                transformation_matrix = SimilarityTransform.from_estimate(landmarks,self.reference_points)#cv2.estimateAffinePartial2D(landmarks,self.reference_points)
+                                aligned_image = cv2.warpAffine(frame,transformation_matrix.params[0:2, :],(112,112))
+                                embedding = self.recognize_face(aligned_image)
+                                result = self.compare_faces(np.asarray(embedding,dtype=np.float32).flatten())
+                                response: str
+                                access = result[0]>self.threshold
+                                if(access):
+                                    response = f"Detected: {result[1][2]} with local id {result[1][0]} at {result[0]} similarity score"
+                                    print(response)
+                                else:
+                                    response = f"Face detected, no match in DB, max sim score: {result[0]}"
+                                    print(response)
+                                #fire and forget event
+                                asyncio.run_coroutine_threadsafe(self.eventConnectionService.publish(Event(direction="outbound",content=response, channel=self.eventConnectionService.channel,status="pending")),self.loop)
+                
+                                if(access):
+                                    #call child class that implements grantAccess interface and pass optional data. Here name for instance.
+                                    self.accessGrantor.grantAccess(result[1][2])   
                     except Exception as e:
                         print(e)
                         continue
