@@ -237,7 +237,7 @@ class RecognitionService:
                                 response+= f" ID: {id_ite}"
                                 asyncio.run_coroutine_threadsafe(self.eventConnectionService.publish(Event(direction="outbound",content=response, channel=self.eventConnectionService.channel,status="pending")),self.loop)
                                 print(f"wrote 1 row")
-                                self.log_offline_test.writerow([time.time(),response,self.eventConnectionService.channel])
+                                self.log_broker_test.writerow([time.time(),response,self.eventConnectionService.channel])
                                 if(access):
                                     #call child class that implements grantAccess interface and pass optional data. Here name for instance.
                                     self.accessGrantor.grantAccess(result[1][2])
@@ -295,7 +295,7 @@ class RecognitionService:
                                     response+= f" LOG_ID: {id_ite}"
                                     asyncio.run_coroutine_threadsafe(self.eventConnectionService.publish(Event(direction="outbound",content=response, channel=self.eventConnectionService.channel,status="pending")),self.loop)
                                     print(f"wrote 1 row")
-                                    self.log_broker_test.writerow([time.time(),response,self.eventConnectionService.channel])
+                                    self.log_offline_test.writerow([time.time(),response,self.eventConnectionService.channel])
                                     if(access):
                                         #call child class that implements grantAccess interface and pass optional data. Here name for instance.
                                         self.accessGrantor.grantAccess(result[1][2])
