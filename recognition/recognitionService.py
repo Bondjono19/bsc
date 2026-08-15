@@ -23,7 +23,7 @@ VALID_NAMES_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),"util
 RESULTS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),"utils","data/results.csv")
 BROKER_LOG_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),"utils","data/sent_events_broker_test.csv")
 T_8_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),"utils","data/t_8_results.csv")
-T_OFFLINE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),"utils","data/offline_results.csv")
+T_OFFLINE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)),"utils","data/sent_events_offline_test.csv")
 class RecognitionService:
     def __init__(self, mode: bool,access_grantor: AccessGrantor,database_manager: DatabaseManager, eventConnectionService: EventConnectionService):
         self.mode = mode
