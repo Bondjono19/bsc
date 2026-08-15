@@ -36,7 +36,7 @@ services:
 ### TLS Support
 To enable TLS support, extend the command for the `API`-service, such that the full command is the following:  
 ```
-    command: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000", "--ssh-keyfile", "/certs/key.pem", "--ssl-keyfile", "/certs/cert.pem"]
+    command: ["uvicorn", "api.main:app", "--host", "0.0.0.0", "--port", "8000","--ssl-certfile","/certs/cert.pem","--ssl-keyfile", "/certs/key.pem"]
 ```
 And make sure to attach the your certs folder to the container:
 ```
