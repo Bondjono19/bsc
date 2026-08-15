@@ -74,7 +74,7 @@ class RecognitionService:
                 self.thread = asyncio.create_task(asyncio.to_thread(self.detect_face_broker_test))
             case "T8_TEST_MODE":
                 self.thread = asyncio.create_task(asyncio.to_thread(self.detect_face_t8))
-            case "OFFLINE_TEST":
+            case "OFFLINE_MODE":
                 self.thread = asyncio.create_task(asyncio.to_thread(self.detect_face_offline_test))
             case _:
                 self.thread = asyncio.create_task(asyncio.to_thread(self.detect_face))
