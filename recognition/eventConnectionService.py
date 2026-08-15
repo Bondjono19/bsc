@@ -14,9 +14,10 @@ class EventConnectionService:
         self.REDIS_PORT = os.getenv("REDIS_PORT")
         self.REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
         self.databaseManager = database_manager
-        self.redis_instance = redis.from_url(f"redis://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}", socket_connect_timeout=5)
-        if(os.environ["ENABLE_TLS_REDIS"] == "True"):
-            self.redis_instance = redis.from_url(f"rediss://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}", socket_connect_timeout=5, ssl_ca_certs=os.environ["/certs/broker_cert.pem"])
+        if(os.getenv("ENABLE_TLS_REDIS", "false").lower() == "true"):
+            self.redis_instance = redis.from_url(f"rediss://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}", socket_connect_timeout=5, ssl_ca_certs="/certs/broker_cert.pem")
+        else:
+            self.redis_instance = redis.from_url(f"redis://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}", socket_connect_timeout=5)
             
     async def __aenter__(self) -> "EventConnectionService":
         self.publish_task = asyncio.create_task(self.try_flush())

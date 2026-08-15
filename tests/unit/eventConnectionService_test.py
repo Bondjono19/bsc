@@ -1,6 +1,7 @@
 import asyncio
 from unittest.mock import AsyncMock, MagicMock
 import pytest
+from redis.asyncio.connection import Connection, SSLConnection
 from recognition.eventConnectionService import EventConnectionService
 from shared.database.models import Event
 
@@ -10,6 +11,25 @@ def test_init_channel(fake_db):
     assert service.channel == "channelName"
     assert service.redis_instance is not None
     assert service.databaseManager is fake_db
+
+
+def test_tls_disabled_when_env_unset(monkeypatch, fake_db):
+    monkeypatch.delenv("ENABLE_TLS_REDIS", raising=False)
+    service = EventConnectionService("channelName", fake_db)
+    assert service.redis_instance.connection_pool.connection_class is Connection
+
+
+@pytest.mark.parametrize("value", ["false", "False", "true", "True"])
+def test_tls_enabled_only_when_env_is_truthy(monkeypatch, fake_db, value):
+    monkeypatch.setenv("ENABLE_TLS_REDIS", value)
+    service = EventConnectionService("channelName", fake_db)
+    pool = service.redis_instance.connection_pool
+
+    if value.lower() == "true":
+        assert pool.connection_class is SSLConnection
+        assert pool.connection_kwargs["ssl_ca_certs"] == "/certs/broker_cert.pem"
+    else:
+        assert pool.connection_class is Connection
 
 async def test_publish_success_marks_published_and_persists(fake_db):
     service = EventConnectionService("recognitionChannel", fake_db)
