@@ -75,7 +75,7 @@ class RecognitionService:
             case "T8_TEST_MODE":
                 self.thread = asyncio.create_task(asyncio.to_thread(self.detect_face_t8))
             case "OFFLINE_TEST":
-                self.thread = asyncio.create_task(asyncio.to_thread(self.detect_face_broker_test))
+                self.thread = asyncio.create_task(asyncio.to_thread(self.detect_face_offline_test))
             case _:
                 self.thread = asyncio.create_task(asyncio.to_thread(self.detect_face))
         return self
@@ -292,7 +292,7 @@ class RecognitionService:
                                         response = f"Face detected, no match in DB, max sim score: {result[0]}"
                                         print(response)
                                     #fire and forget event
-                                    response+= f" ID: {id_ite}"
+                                    response+= f" LOG_ID: {id_ite}"
                                     asyncio.run_coroutine_threadsafe(self.eventConnectionService.publish(Event(direction="outbound",content=response, channel=self.eventConnectionService.channel,status="pending")),self.loop)
                                     print(f"wrote 1 row")
                                     self.log_broker_test.writerow([time.time(),response,self.eventConnectionService.channel])
