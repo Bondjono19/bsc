@@ -426,8 +426,6 @@ class RecognitionService:
                 with open(RESULTS_PATH,"w") as f:
                     f.write("score,pred_identity,true_identity_of_probe,is_enrolled\n")
                     for filename in filenames:
-                        if not "Zidane" in filename:
-                            continue
                         image = images[filename]
                         cv_img = np.array(image)
                         cv_img = cv2.cvtColor(cv_img,cv2.COLOR_RGB2BGR)
@@ -455,9 +453,8 @@ class RecognitionService:
                                 else:
                                     is_enrolled = False
                                 print(f"Predicted:   Max sim score: {result[0]} and predicted identity: {result[1][2]}. True identity of probe: {stripped_probe_name}. Probe is enrolled: {is_enrolled}")
+                                asyncio.run_coroutine_threadsafe(self.eventConnectionService.publish(Event(direction="outbound",content="response", channel=self.eventConnectionService.channel,status="pending")),self.loop)
                                 f.write(f"{result[0]},{result[1][2]},{stripped_probe_name},{is_enrolled}"+"\n")
-                                cv2.imwrite("/app/recognition/utils/data/detectedz.png", debug_frame)
-                                cv2.imwrite("/app/recognition/utils/data/alignedz.png", aligned_image)
             except Exception as e:
                 print(e)
             self.thread_running = False   

@@ -78,3 +78,33 @@ async def test_fetch_all_returns_scalar_list(manager):
     rows = await manager.fetchAll(Identity, Identity.embeddings)
 
     assert rows == ["ident1", "ident2"]
+
+async def test_add_embedding_creates_identity_when_missing(manager):
+    result_mock = MagicMock()
+    result_mock.scalar_one_or_none.return_value = None
+    session = FakeSession(execute_result=result_mock)
+    manager.AsyncSessionLocal = session_factory(session)
+
+    embedding = await manager.add_embedding("Dave", [0.0] * 512, global_id=77)
+
+    identity = session.added[0]
+    assert isinstance(identity, Identity)
+    assert identity.name == "Dave"
+    assert identity.global_id == 77
+    assert session.flushed == 1
+    assert embedding.identity_id == identity.id
+    assert session.committed == 1
+
+async def test_add_embedding_reuses_existing_identity(manager):
+    existing = Identity(global_id=1, name="Dave")
+    existing.id = 12
+    result_mock = MagicMock()
+    result_mock.scalar_one_or_none.return_value = existing
+    session = FakeSession(execute_result=result_mock)
+    manager.AsyncSessionLocal = session_factory(session)
+
+    embedding = await manager.add_embedding("Dave", [0.5] * 512)
+
+    assert session.added == [embedding]
+    assert session.flushed == 0
+    assert embedding.identity_id == 12

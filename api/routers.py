@@ -24,9 +24,10 @@ class IdentityRouter:
                     ]
                 }
         '''
-        data = json.loads(await request.body())
-        if not data:
-            return Response("Empty request body", status_code=400)
+        try:
+            data = json.loads(await request.body())
+        except:
+            return Response("Couldn't parse body", status_code=400)
         
         name = data.get("name")
         if not name:

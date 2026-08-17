@@ -9,7 +9,7 @@ import numpy as np
 def _fresh_service():
 
     service = RecognitionService(
-        detection_mode=True,
+        mode="DETECTION_MODE",
         access_grantor=MagicMock(spec=AccessGrantor),
         database_manager=AsyncMock(spec=DatabaseManager),
         eventConnectionService=AsyncMock(spec=EventConnectionService),
@@ -277,5 +277,66 @@ def test_compare_faces():
     
     comp = service.compare_faces(q)
 
-    assert comp[0] > 0.5
+    assert comp[0] > 0.52
     assert comp[1][2] == "Messi"
+
+class _FakeEmbedding:
+    def __init__(self, vector):
+        self.vector = vector
+
+class _FakeIdentity:
+    def __init__(self, id, global_id, name, vectors):
+        self.id = id
+        self.global_id = global_id
+        self.name = name
+        self.embeddings = [_FakeEmbedding(v) for v in vectors]
+
+async def test_load_identities_flattens_every_embedding():
+    service = _fresh_service()
+    service.databaseManager.fetchAll.return_value = [
+        _FakeIdentity(1, 10, "Messi", [[0.1] * 512, [0.2] * 512]),
+        _FakeIdentity(2, 20, "Ronaldo", [[0.3] * 512]),
+    ]
+
+    await service.load_identites()
+
+    assert len(service.identities) == 3
+    assert [i[2] for i in service.identities] == ["Messi", "Messi", "Ronaldo"]
+    assert service.identities[0][3].dtype == np.float32
+
+async def test_load_identities_with_empty_database():
+    service = _fresh_service()
+    service.databaseManager.fetchAll.return_value = []
+
+    await service.load_identites()
+
+    assert service.identities == []
+
+async def test_load_identities_skips_identity_without_embeddings():
+    service = _fresh_service()
+    service.databaseManager.fetchAll.return_value = [_FakeIdentity(1, 10, "NoFace", [])]
+
+    await service.load_identites()
+
+    assert service.identities == []
+
+def test_recognize_face_returns_flat_float32_embedding():
+    service = _fresh_service()
+    service.recognizer = MagicMock()
+    service.recognizer.run.return_value = [np.zeros((1, 512), dtype=np.float32)]
+
+    frame = np.zeros((112, 112, 3), dtype=np.uint8)
+    embedding = service.recognize_face(frame)
+
+    assert embedding.shape == (512,)
+    assert embedding.dtype == np.float32
+    _, feed = service.recognizer.run.call_args[0]
+    assert feed["input.1"].shape == (1, 3, 112, 112)
+
+def test_similarity_below_threshold_is_not_a_match():
+    service = _fresh_service()
+    service.identities = [(1, 10, "Messi", np.asarray([1.0, 0.0], dtype=np.float32))]
+
+    best = service.compare_faces(np.asarray([0.2, 1.0], dtype=np.float32))
+
+    assert best[0] < service.threshold
