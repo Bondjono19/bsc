@@ -27,7 +27,7 @@ def test_tls_enabled_only_when_env_is_truthy(monkeypatch, fake_db, value):
 
     if value.lower() == "true":
         assert pool.connection_class is SSLConnection
-        assert pool.connection_kwargs["ssl_ca_certs"] == "/certs/broker_cert.pem"
+        assert pool.connection_kwargs["ssl_ca_certs"] == "/app/deploy/certs/broker_cert.pem"
     else:
         assert pool.connection_class is Connection
 

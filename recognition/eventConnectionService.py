@@ -15,7 +15,7 @@ class EventConnectionService:
         self.REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
         self.databaseManager = database_manager
         if(os.getenv("ENABLE_TLS_REDIS", "false").lower() == "true"):
-            self.redis_instance = redis.from_url(f"rediss://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}", socket_connect_timeout=5, ssl_ca_certs="/certs/broker_cert.pem")
+            self.redis_instance = redis.from_url(f"rediss://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}", socket_connect_timeout=5, ssl_ca_certs="/app/deploy/certs/broker_cert.pem")
         else:
             self.redis_instance = redis.from_url(f"redis://:{self.REDIS_PASSWORD}@{self.REDIS_HOST}:{self.REDIS_PORT}", socket_connect_timeout=5)
             

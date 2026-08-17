@@ -51,7 +51,7 @@ services:
 Addtionally, to enable TLS for the event broker, set 'ENABLE_TLS_REDIS=True' and make sure to attach a volume to the `Recognition`-service. The cert must be name `broker_cert.pem`:
 ```
 services:
-    api:
+    recognition:
         ...
         volumes:
             - ./certs:/certs:ro
