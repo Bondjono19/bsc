@@ -1,0 +1,32 @@
+services:
+  dbx86:
+    image: pgvector/pgvector:pg17
+    restart: always
+    environment:
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=db
+    ports:
+      - '5432:5432'
+    volumes:
+      - deploy_db3:/var/lib/postgresql/data
+    
+  dbarm:
+    image: pgvector/pgvector:pg17
+    restart: always
+    environment:
+      - POSTGRES_PASSWORD=password
+      - POSTGRES_USER=postgres
+      - POSTGRES_DB=db
+    ports:
+      - '5433:5432'
+    volumes:
+      - pi_data_arm:/var/lib/postgresql/data
+
+volumes:
+  deploy_db3:
+    external: true
+    name: deploy_db3
+  pi_data_arm:
+    external: true
+    name: pi_data_arm

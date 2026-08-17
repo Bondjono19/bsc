@@ -426,10 +426,13 @@ class RecognitionService:
                 with open(RESULTS_PATH,"w") as f:
                     f.write("score,pred_identity,true_identity_of_probe,is_enrolled\n")
                     for filename in filenames:
+                        if not "Zidane" in filename:
+                            continue
                         image = images[filename]
                         cv_img = np.array(image)
                         cv_img = cv2.cvtColor(cv_img,cv2.COLOR_RGB2BGR)
                         h,w,_ = cv_img.shape
+                        debug_frame = cv_img.copy()
                         self.detector.setInputSize((w,h))
                         _, faces = self.detector.detect(cv_img)
                         if faces is not None:
@@ -438,6 +441,10 @@ class RecognitionService:
                                 continue
                             for face in faces:
                                 landmarks = face[4:14].reshape(5,2).astype(np.float32)
+                                bbox = face[0:4].astype(int)
+                                cv2.rectangle(debug_frame, (bbox[0], bbox[1]), (bbox[0]+bbox[2], bbox[1]+bbox[3]), (255, 0, 0), 2)
+                                for (x, y) in landmarks:
+                                    cv2.circle(debug_frame, (int(x), int(y)), 4, (0, 0, 255), -1)
                                 transformation_matrix = SimilarityTransform.from_estimate(landmarks,self.reference_points)
                                 aligned_image = cv2.warpAffine(cv_img,transformation_matrix.params[0:2, :],(112,112))
                                 embedding = self.recognize_face(aligned_image)
@@ -449,6 +456,8 @@ class RecognitionService:
                                     is_enrolled = False
                                 print(f"Predicted:   Max sim score: {result[0]} and predicted identity: {result[1][2]}. True identity of probe: {stripped_probe_name}. Probe is enrolled: {is_enrolled}")
                                 f.write(f"{result[0]},{result[1][2]},{stripped_probe_name},{is_enrolled}"+"\n")
+                                cv2.imwrite("/app/recognition/utils/data/detectedz.png", debug_frame)
+                                cv2.imwrite("/app/recognition/utils/data/alignedz.png", aligned_image)
             except Exception as e:
                 print(e)
             self.thread_running = False   
