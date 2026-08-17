@@ -33,6 +33,8 @@ class FakeSession:
         self.merged = []
         self.committed = 0
         self.refreshed = []
+        self.flushed = 0
+        self._next_id = 1
         self._execute_result = execute_result
 
     async def __aenter__(self):
@@ -49,6 +51,13 @@ class FakeSession:
 
     async def refresh(self, obj):
         self.refreshed.append(obj)
+
+    async def flush(self):
+        self.flushed += 1
+        for obj in self.added:
+            if getattr(obj, "id", None) is None:
+                obj.id = self._next_id
+                self._next_id += 1
 
     async def delete(self, obj):
         self.deleted.append(obj)

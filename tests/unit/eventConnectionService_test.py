@@ -125,3 +125,27 @@ async def test_close_cancels_tasks_and_closes_connections(fake_db):
     await service.close()
     service.publish_task.cancel.assert_called_once()
     service.redis_instance.aclose.assert_awaited_once()
+
+
+async def test_context_manager_starts_and_cancels_flush_task(fake_db):
+    service = EventConnectionService("recognitionChannel", fake_db)
+    service.redis_instance = AsyncMock()
+    fake_db.execute.return_value = []
+
+    async with service as ecs:
+        assert ecs is service
+        assert service.publish_task is not None
+        assert not service.publish_task.done()
+
+    await asyncio.sleep(0)
+    assert service.publish_task.cancelled()
+    service.redis_instance.aclose.assert_awaited_once()
+
+
+async def test_close_without_started_task_is_safe(fake_db):
+    service = EventConnectionService("recognitionChannel", fake_db)
+    service.redis_instance = AsyncMock()
+
+    await service.close()
+
+    service.redis_instance.aclose.assert_awaited_once()

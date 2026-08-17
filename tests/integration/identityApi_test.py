@@ -130,3 +130,24 @@ async def test_remove_identity_not_found(client, monkeypatch):
     )
     assert resp.status_code == 400
     assert resp.text == "No such identity"
+
+
+async def test_create_identity_malformed_json_body(client):
+    resp = await client.post(
+        "/identities/create", headers=AUTH_HEADERS, content="not json at all"
+    )
+    assert resp.status_code == 400
+    assert resp.text == "Couldn't parse body"
+
+async def test_remove_endpoint_is_also_behind_the_middleware(client, monkeypatch):
+    monkeypatch.setattr(
+        authenticationService, "verifyToken", AsyncMock(return_value=False)
+    )
+    resp = await client.request(
+        "DELETE", "/identities/remove", content=json.dumps({"id": 1})
+    )
+    assert resp.status_code == 401
+
+async def test_unknown_route_returns_404_after_auth(client):
+    resp = await client.get("/does/not/exist", headers=AUTH_HEADERS)
+    assert resp.status_code == 404
